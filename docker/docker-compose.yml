@@ -1,0 +1,76 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: gittrans-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: gittrans
+      MYSQL_USER: gittrans
+      MYSQL_PASSWORD: gittrans
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -ugittrans -pgittrans"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ..
+      dockerfile: docker/web.Dockerfile
+    container_name: gittrans-web
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      APP_BASE_URL: http://localhost:3000
+      DATABASE_URL: mysql://gittrans:gittrans@mysql:3306/gittrans
+      APP_ENCRYPTION_KEY: replace-with-a-32-byte-secret
+      SESSION_SECRET: replace-with-a-random-session-secret
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:-}
+      GITHUB_APP_CLIENT_ID: ${GITHUB_APP_CLIENT_ID:-}
+      GITHUB_APP_CLIENT_SECRET: ${GITHUB_APP_CLIENT_SECRET:-}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      OPENROUTER_PLATFORM_API_KEY: ${OPENROUTER_PLATFORM_API_KEY:-}
+      WORKER_POLL_INTERVAL_MS: 5000
+      TASK_LOCK_TIMEOUT_MS: 600000
+      LOG_LEVEL: info
+    ports:
+      - "3000:3000"
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/worker.Dockerfile
+    container_name: gittrans-worker
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      APP_BASE_URL: http://localhost:3000
+      DATABASE_URL: mysql://gittrans:gittrans@mysql:3306/gittrans
+      APP_ENCRYPTION_KEY: replace-with-a-32-byte-secret
+      SESSION_SECRET: replace-with-a-random-session-secret
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:-}
+      GITHUB_APP_CLIENT_ID: ${GITHUB_APP_CLIENT_ID:-}
+      GITHUB_APP_CLIENT_SECRET: ${GITHUB_APP_CLIENT_SECRET:-}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-}
+      OPENROUTER_PLATFORM_API_KEY: ${OPENROUTER_PLATFORM_API_KEY:-}
+      WORKER_POLL_INTERVAL_MS: 5000
+      TASK_LOCK_TIMEOUT_MS: 600000
+      LOG_LEVEL: info
+
+volumes:
+  mysql-data:

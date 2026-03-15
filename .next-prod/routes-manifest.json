@@ -1,0 +1,154 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/github/installations/[installationId]/repositories",
+      "regex": "^/api/github/installations/([^/]+?)/repositories(?:/)?$",
+      "routeKeys": {
+        "nxtPinstallationId": "nxtPinstallationId"
+      },
+      "namedRegex": "^/api/github/installations/(?<nxtPinstallationId>[^/]+?)/repositories(?:/)?$"
+    },
+    {
+      "page": "/api/repos/[repoId]",
+      "regex": "^/api/repos/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPrepoId": "nxtPrepoId"
+      },
+      "namedRegex": "^/api/repos/(?<nxtPrepoId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/repos/[repoId]/config",
+      "regex": "^/api/repos/([^/]+?)/config(?:/)?$",
+      "routeKeys": {
+        "nxtPrepoId": "nxtPrepoId"
+      },
+      "namedRegex": "^/api/repos/(?<nxtPrepoId>[^/]+?)/config(?:/)?$"
+    },
+    {
+      "page": "/api/repos/[repoId]/files",
+      "regex": "^/api/repos/([^/]+?)/files(?:/)?$",
+      "routeKeys": {
+        "nxtPrepoId": "nxtPrepoId"
+      },
+      "namedRegex": "^/api/repos/(?<nxtPrepoId>[^/]+?)/files(?:/)?$"
+    },
+    {
+      "page": "/api/repos/[repoId]/tasks",
+      "regex": "^/api/repos/([^/]+?)/tasks(?:/)?$",
+      "routeKeys": {
+        "nxtPrepoId": "nxtPrepoId"
+      },
+      "namedRegex": "^/api/repos/(?<nxtPrepoId>[^/]+?)/tasks(?:/)?$"
+    },
+    {
+      "page": "/api/tasks/[taskId]",
+      "regex": "^/api/tasks/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtaskId": "nxtPtaskId"
+      },
+      "namedRegex": "^/api/tasks/(?<nxtPtaskId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/tasks/[taskId]/preview",
+      "regex": "^/api/tasks/([^/]+?)/preview(?:/)?$",
+      "routeKeys": {
+        "nxtPtaskId": "nxtPtaskId"
+      },
+      "namedRegex": "^/api/tasks/(?<nxtPtaskId>[^/]+?)/preview(?:/)?$"
+    },
+    {
+      "page": "/api/tasks/[taskId]/progress",
+      "regex": "^/api/tasks/([^/]+?)/progress(?:/)?$",
+      "routeKeys": {
+        "nxtPtaskId": "nxtPtaskId"
+      },
+      "namedRegex": "^/api/tasks/(?<nxtPtaskId>[^/]+?)/progress(?:/)?$"
+    },
+    {
+      "page": "/repo/[id]",
+      "regex": "^/repo/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/repo/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/repo/[id]/config",
+      "regex": "^/repo/([^/]+?)/config(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/repo/(?<nxtPid>[^/]+?)/config(?:/)?$"
+    },
+    {
+      "page": "/task/[id]",
+      "regex": "^/task/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/task/(?<nxtPid>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
+      "page": "/settings",
+      "regex": "^/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

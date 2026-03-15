@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum RepoStatus {
+  ready
+  running
+  error
+  disconnected
+}
+
+enum TaskType {
+  full
+  incremental
+}
+
+enum TriggerSource {
+  manual
+  webhook
+  system
+}
+
+enum TaskStatus {
+  pending
+  running
+  succeeded
+  failed
+  cancelled
+}
+
+enum TaskItemStatus {
+  pending
+  running
+  succeeded
+  failed
+  skipped
+}
+
+model User {
+  id             String          @id @default(cuid())
+  name           String
+  email          String?         @unique
+  avatarUrl      String?
+  githubLogin    String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  githubAccount  GitHubAccount?
+  sessions       Session[]
+  repositories   Repository[]
+}
+
+model GitHubAccount {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  githubUserId          String    @unique
+  login                 String
+  encryptedAccessToken  String?   @db.Text
+  encryptedRefreshToken String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GitHubAppInstallation {
+  id               String       @id @default(cuid())
+  installationId   String       @unique
+  accountLogin     String
+  accountType      String
+  repositoriesCount Int?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  repositories     Repository[]
+}
+
+model Repository {
+  id                 String               @id @default(cuid())
+  userId             String
+  installationRefId  String
+  owner              String
+  name               String
+  fullName           String               @unique
+  githubRepoId       String               @unique
+  defaultBranch      String
+  baseBranch         String
+  baseLanguage       String
+  status             RepoStatus           @default(ready)
+  currentPrNumber    Int?
+  translationBranch  String
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  installation       GitHubAppInstallation @relation(fields: [installationRefId], references: [id], onDelete: Restrict)
+  config             RepositoryConfig?
+  syncState          RepositorySyncState?
+  tasks              TranslationTask[]
+  pullRequestState   PullRequestState?
+}
+
+model RepositoryConfig {
+  id                      String     @id @default(cuid())
+  repoId                  String     @unique
+  targetLanguagesJson     Json
+  includePathsJson        Json
+  ignoreRulesText         String     @db.Text
+  modelId                 String
+  outputRoot              String     @default("translations")
+  readmeNavigationEnabled Boolean    @default(true)
+  usePlatformKey          Boolean    @default(true)
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+  repository              Repository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+}
+
+model RepositorySyncState {
+  id                   String     @id @default(cuid())
+  repoId               String     @unique
+  lastSyncedSha        String?
+  lastSuccessfulTaskId String?
+  lastWebhookDeliveryId String?
+  lastSyncedAt         DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  repository           Repository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+}
+
+model TranslationTask {
+  id                      String            @id @default(cuid())
+  repoId                  String
+  type                    TaskType
+  triggerSource           TriggerSource
+  status                  TaskStatus        @default(pending)
+  priority                Int               @default(0)
+  payloadJson             Json?
+  progressTotal           Int               @default(0)
+  progressDone            Int               @default(0)
+  progressFailed          Int               @default(0)
+  changedFilesJson        Json?
+  targetLanguagesJson     Json?
+  modelId                 String?
+  currentLanguage         String?
+  currentFile             String?
+  readmeNavigationPreview String?           @db.Text
+  commitRange             String?
+  prUrl                   String?
+  errorSummary            String?           @db.Text
+  lockOwner               String?
+  lockExpiresAt           DateTime?
+  startedAt               DateTime?
+  finishedAt              DateTime?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  repository              Repository        @relation(fields: [repoId], references: [id], onDelete: Cascade)
+  items                   TranslationTaskItem[]
+}
+
+model TranslationTaskItem {
+  id                String         @id @default(cuid())
+  taskId            String
+  language          String
+  filePath          String
+  outputPath        String?
+  status            TaskItemStatus @default(pending)
+  errorMessage      String?        @db.Text
+  sourceContent     String?        @db.LongText
+  translatedContent String?        @db.LongText
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  task              TranslationTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model PullRequestState {
+  id            String     @id @default(cuid())
+  repoId        String     @unique
+  number        Int
+  url           String
+  state         String
+  headBranch    String
+  baseBranch    String
+  lastCommitSha String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  repository    Repository @relation(fields: [repoId], references: [id], onDelete: Cascade)
+}
+
+model WebhookDelivery {
+  id             String   @id @default(cuid())
+  deliveryId     String   @unique
+  eventName      String
+  installationId String?
+  repoFullName   String?
+  status         String
+  receivedAt     DateTime @default(now())
+  processedAt    DateTime?
+}

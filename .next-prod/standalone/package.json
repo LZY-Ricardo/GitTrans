@@ -1,0 +1,47 @@
+{
+  "name": "gittrans",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "worker": "tsx src/worker/index.ts",
+    "worker:once": "cross-env WORKER_RUN_ONCE=1 tsx src/worker/index.ts",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "check": "prisma validate && next build"
+  },
+  "dependencies": {
+    "@next/env": "^15.1.11",
+    "@prisma/client": "^6.19.0",
+    "@radix-ui/react-slot": "^1.2.4",
+    "@tailwindcss/postcss": "^4.2.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "ignore": "^7.0.5",
+    "lucide-react": "^0.577.0",
+    "next": "^15.1.11",
+    "octokit": "^4.1.2",
+    "pino": "^9.9.0",
+    "postcss": "^8.5.8",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.5.0",
+    "tailwindcss": "^4.2.1",
+    "yaml": "^2.8.1",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "cross-env": "^10.0.0",
+    "prisma": "^6.19.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

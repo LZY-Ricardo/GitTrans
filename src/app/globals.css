@@ -1,0 +1,131 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+
+  --color-paper: #fffaf5;
+  --color-sand: #f4e7d8;
+  --color-mist: #ead6c3;
+  --color-ink: #221815;
+  --color-ink-soft: #5d4a41;
+
+  --color-brand-50: #fff1ee;
+  --color-brand-100: #fdded7;
+  --color-brand-200: #f8b8ab;
+  --color-brand-300: #e98a73;
+  --color-brand-400: #d85a40;
+  --color-brand-500: #c53d22;
+  --color-brand-600: #a82c19;
+  --color-brand-700: #8c1f16;
+  --color-brand-800: #641712;
+  --color-brand-900: #3a0f0d;
+}
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at top left, rgba(213, 90, 64, 0.12), transparent 24rem),
+    radial-gradient(circle at top right, rgba(168, 44, 25, 0.08), transparent 22rem),
+    linear-gradient(180deg, #fffaf5 0%, #f9f1ea 100%);
+  color: var(--color-ink);
+  font-family: var(--font-body), sans-serif;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(34, 24, 21, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34, 24, 21, 0.025) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at center, black 55%, transparent 100%);
+  opacity: 0.9;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(197, 61, 34, 0.18);
+}
+
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  border: 1px solid rgba(197, 61, 34, 0.16);
+  background: rgba(255, 241, 238, 0.85);
+  padding: 0.45rem 0.8rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--color-brand-700);
+}
+
+.section-eyebrow::before {
+  content: "";
+  display: block;
+  height: 0.5rem;
+  width: 0.5rem;
+  border-radius: 999px;
+  background: var(--color-brand-500);
+}
+
+.paper-accent {
+  position: relative;
+}
+
+.paper-accent::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 0.85rem;
+  background: linear-gradient(90deg, rgba(197, 61, 34, 0.24), rgba(197, 61, 34, 0));
+  z-index: -1;
+}
+
+.hero-mesh {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.58)),
+    radial-gradient(circle at top left, rgba(216, 90, 64, 0.18), transparent 16rem),
+    radial-gradient(circle at bottom right, rgba(140, 31, 22, 0.08), transparent 18rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
