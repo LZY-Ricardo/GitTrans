@@ -1,5 +1,6 @@
 import { AppError } from "@/lib/errors";
 import { env, hasOpenRouterConfig } from "@/lib/env";
+import { outboundFetch } from "@/lib/outbound-fetch";
 
 const CODE_FENCE_REGEX = /```[\s\S]*?```/g;
 const MAX_CHARS_PER_CHUNK = 3500;
@@ -81,7 +82,7 @@ async function translateChunk(options: {
   const systemPrompt =
     "You translate Markdown documentation. Preserve markdown structure, headings, tables, blockquotes, HTML tags, HTML comments, URLs, file paths, command names, variable names, frontmatter keys, inline code, and fenced code blocks. Only return the translated markdown fragment without explanations.";
 
-  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+  const response = await outboundFetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${env.OPENROUTER_PLATFORM_API_KEY}`,

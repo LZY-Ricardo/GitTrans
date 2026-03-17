@@ -3,7 +3,7 @@ import { ArrowUpRight, LayoutDashboard, Settings } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getDemoSession } from "@/modules/mvp/mock-data";
+import { getCurrentSessionPayload } from "@/modules/mvp/page-data";
 
 const navItems = [
   { href: "/dashboard", label: "仓库", icon: LayoutDashboard },
@@ -11,7 +11,7 @@ const navItems = [
 ];
 
 export async function SiteHeader() {
-  const session = await getDemoSession();
+  const session = await getCurrentSessionPayload();
 
   return (
     <header className="sticky top-4 z-40 mx-auto w-[min(1200px,calc(100%-24px))] rounded-full border border-white/70 bg-paper/88 px-4 py-3 shadow-[0_20px_80px_rgba(71,28,19,0.12)] backdrop-blur-xl">
@@ -46,21 +46,37 @@ export async function SiteHeader() {
 
         <div className="flex items-center gap-3">
           <Badge variant="outline">平台托管 Key</Badge>
-          <div className="hidden text-right sm:block">
-            <p className="text-sm font-medium text-ink">{session.user.name}</p>
-            <p className="text-xs text-ink-soft">@{session.user.githubLogin}</p>
-          </div>
-          <img
-            alt={session.user.name}
-            className="h-10 w-10 rounded-full border border-white/80 object-cover shadow-[0_8px_24px_rgba(34,24,21,0.12)]"
-            src={session.user.avatarUrl}
-          />
-          <Button asChild size="sm" variant="outline">
-            <a href={session.githubApp.installUrl} rel="noreferrer" target="_blank">
-              GitHub App
-              <ArrowUpRight className="h-4 w-4" />
-            </a>
-          </Button>
+          {session ? (
+            <>
+              <div className="hidden text-right sm:block">
+                <p className="text-sm font-medium text-ink">{session.user.name}</p>
+                <p className="text-xs text-ink-soft">@{session.user.githubLogin}</p>
+              </div>
+              {session.user.avatarUrl ? (
+                <img
+                  alt={session.user.name}
+                  className="h-10 w-10 rounded-full border border-white/80 object-cover shadow-[0_8px_24px_rgba(34,24,21,0.12)]"
+                  src={session.user.avatarUrl}
+                />
+              ) : (
+                <div className="grid h-10 w-10 place-items-center rounded-full bg-brand-100 text-sm font-semibold text-brand-700">
+                  {session.user.name.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              {session.githubApp.installUrl ? (
+                <Button asChild size="sm" variant="outline">
+                  <a href={session.githubApp.installUrl} rel="noreferrer" target="_blank">
+                    GitHub App
+                    <ArrowUpRight className="h-4 w-4" />
+                  </a>
+                </Button>
+              ) : null}
+            </>
+          ) : (
+            <Button asChild size="sm">
+              <Link href="/api/auth/github/start">使用 GitHub 登录</Link>
+            </Button>
+          )}
         </div>
       </div>
     </header>

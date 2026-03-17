@@ -11,7 +11,7 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   day: "2-digit",
 });
 
-export function formatDateTime(value?: string | null) {
+export function formatDateTime(value?: string | Date | null) {
   if (!value) {
     return "未开始";
   }
@@ -19,7 +19,7 @@ export function formatDateTime(value?: string | null) {
   return dateTimeFormatter.format(new Date(value));
 }
 
-export function formatDate(value?: string | null) {
+export function formatDate(value?: string | Date | null) {
   if (!value) {
     return "未设置";
   }
@@ -27,7 +27,10 @@ export function formatDate(value?: string | null) {
   return dateFormatter.format(new Date(value));
 }
 
-export function formatDuration(startedAt?: string | null, finishedAt?: string | null) {
+export function formatDuration(
+  startedAt?: string | Date | null,
+  finishedAt?: string | Date | null,
+) {
   if (!startedAt) {
     return "等待中";
   }

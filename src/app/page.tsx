@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+type HomePageProps = {
+  searchParams?: Promise<{ error?: string }>;
+};
+
 const valueProps = [
   {
     title: "接 GitHub，不接命令行",
@@ -23,7 +27,16 @@ const valueProps = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = await searchParams;
+  const error = params?.error ?? null;
+  const errorMessage =
+    error === "github_network_unreachable"
+      ? "GitHub 登录失败：后端无法连接 github.com:443。请开启 VPN/代理，或在 .env 设置 HTTPS_PROXY 后重试。"
+      : error === "github_auth_failed"
+        ? "GitHub 登录失败：请回到首页重新点击“使用 GitHub 登录”再试一次。"
+        : null;
+
   return (
     <main className="pb-16">
       <div className="mx-auto mt-4 w-[min(1200px,calc(100%-24px))]">
@@ -51,6 +64,12 @@ export default function HomePage() {
           </div>
         </header>
 
+        {errorMessage ? (
+          <div className="mt-5 rounded-[28px] border border-rose-100 bg-rose-50/70 p-5 text-sm leading-7 text-rose-700">
+            {errorMessage}
+          </div>
+        ) : null}
+
         <section className="hero-mesh mt-8 overflow-hidden rounded-[40px] border border-white/70 px-6 py-10 shadow-[0_32px_100px_rgba(71,28,19,0.08)] md:px-10 md:py-14">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-6">
@@ -74,7 +93,7 @@ export default function HomePage() {
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="secondary">
-                  <Link href="/repo/repo_456">直接看运行中任务</Link>
+                  <Link href="/settings">查看账户与运行边界</Link>
                 </Button>
               </div>
 

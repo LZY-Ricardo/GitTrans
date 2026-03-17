@@ -3,10 +3,10 @@ import { KeyRound, LockKeyhole, UserCircle2 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getBootstrapPayload, getDemoSession } from "@/modules/mvp/mock-data";
+import { getSettingsPageData } from "@/modules/mvp/page-data";
 
 export default async function SettingsPage() {
-  const [session, bootstrap] = await Promise.all([getDemoSession(), getBootstrapPayload()]);
+  const { session, bootstrap } = await getSettingsPageData();
 
   return (
     <AppShell
@@ -24,9 +24,9 @@ export default async function SettingsPage() {
             <CardDescription>登录态、头像和 GitHub 账号信息应来自 `GET /api/auth/session`。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm leading-7 text-ink-soft">
-            <p><span className="font-medium text-ink">昵称：</span>{session.user.name}</p>
-            <p><span className="font-medium text-ink">GitHub：</span>@{session.user.githubLogin}</p>
-            <p><span className="font-medium text-ink">Session：</span>{session.authenticated ? "已登录" : "未登录"}</p>
+            <p><span className="font-medium text-ink">昵称：</span>{session?.user.name ?? "访客"}</p>
+            <p><span className="font-medium text-ink">GitHub：</span>{session ? `@${session.user.githubLogin}` : "尚未登录"}</p>
+            <p><span className="font-medium text-ink">Session：</span>{session?.authenticated ? "已登录" : "未登录"}</p>
           </CardContent>
         </Card>
 

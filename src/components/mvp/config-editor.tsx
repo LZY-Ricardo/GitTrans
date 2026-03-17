@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCheck, GitFork, Languages, Save, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { requestApi } from "@/lib/client-api";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,9 +18,11 @@ type ConfigEditorProps = {
   config: RepoConfig;
   bootstrap: BootstrapPayload;
   files: FileTreeItem[];
+  filesError?: string | null;
 };
 
-export function ConfigEditor({ config, bootstrap, files }: ConfigEditorProps) {
+export function ConfigEditor({ config, bootstrap, files, filesError }: ConfigEditorProps) {
+  const router = useRouter();
   const [baseBranch, setBaseBranch] = useState(config.baseBranch);
   const [baseLanguage, setBaseLanguage] = useState(config.baseLanguage);
   const [targetLanguages, setTargetLanguages] = useState<string[]>(config.targetLanguages);
@@ -28,7 +32,9 @@ export function ConfigEditor({ config, bootstrap, files }: ConfigEditorProps) {
     config.readmeNavigationEnabled,
   );
   const [selectedPaths, setSelectedPaths] = useState<string[]>(
-    files.filter((item) => item.selected).map((item) => item.path),
+    files.length > 0
+      ? files.filter((item) => item.selected).map((item) => item.path)
+      : config.includePaths,
   );
   const [isSaving, setIsSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState("未保存更改");
@@ -47,10 +53,32 @@ export function ConfigEditor({ config, bootstrap, files }: ConfigEditorProps) {
 
   async function handleSave() {
     setIsSaving(true);
-    setSavedMessage("正在模拟保存到 /api/repos/:repoId/config ...");
-    await new Promise((resolve) => setTimeout(resolve, 900));
-    setSavedMessage("演示态已保存，本地状态已更新。真实环境可直接替换为接口调用。");
-    setIsSaving(false);
+    setSavedMessage("正在保存配置...");
+
+    try {
+      const payload = await requestApi<{ saved: boolean; configVersion: number }>(
+        `/api/repos/${config.repoId}/config`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            baseBranch,
+            baseLanguage,
+            targetLanguages,
+            includePaths: selectedPaths,
+            ignoreRulesText,
+            modelId,
+            readmeNavigationEnabled,
+          }),
+        },
+      );
+
+      setSavedMessage(`保存成功，配置版本 ${payload.configVersion}`);
+      router.refresh();
+    } catch (error) {
+      setSavedMessage(error instanceof Error ? error.message : "保存配置失败");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -194,6 +222,16 @@ export function ConfigEditor({ config, bootstrap, files }: ConfigEditorProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            {filesError ? (
+              <div className="rounded-[22px] border border-amber-100 bg-amber-50/70 px-4 py-3 text-sm leading-7 text-amber-700">
+                {filesError}
+              </div>
+            ) : null}
+            {files.length === 0 ? (
+              <div className="rounded-[22px] border border-dashed border-ink/12 bg-white/80 px-4 py-6 text-sm leading-7 text-ink-soft">
+                当前还没有可展示的仓库文件树。基础配置仍然可以保存，等 GitHub 安装与仓库权限就绪后再读取实时文件列表。
+              </div>
+            ) : null}
             {files.map((item) => (
               <label
                 key={item.path}
@@ -234,7 +272,7 @@ export function ConfigEditor({ config, bootstrap, files }: ConfigEditorProps) {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">保存状态</CardTitle>
-            <CardDescription>演示态使用本地状态模拟 `PUT /api/repos/:repoId/config`。</CardDescription>
+            <CardDescription>保存会直接调用 `PUT /api/repos/:repoId/config`。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-[24px] border border-brand-100 bg-brand-50/70 p-4 text-sm leading-7 text-ink-soft">
@@ -243,7 +281,10 @@ export function ConfigEditor({ config, bootstrap, files }: ConfigEditorProps) {
               <p>选中文件/规则：{selectedPaths.length} 条 include 项</p>
             </div>
             <p className="text-sm leading-6 text-ink-soft">{savedMessage}</p>
-            <Button disabled={isSaving || targetLanguages.length === 0} onClick={handleSave}>
+            <Button
+              disabled={isSaving || targetLanguages.length === 0 || selectedPaths.length === 0}
+              onClick={handleSave}
+            >
               {isSaving ? "保存中..." : "保存配置"}
               <Save className="h-4 w-4" />
             </Button>

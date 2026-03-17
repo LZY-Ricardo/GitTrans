@@ -5,6 +5,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { AppError } from "@/lib/errors";
 import { env, hasGitHubAppConfig, hasGitHubWebhookConfig } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { octokitFetch, outboundFetch } from "@/lib/outbound-fetch";
 import { normalizePath } from "@/lib/paths";
 
 type GitHubUser = {
@@ -39,6 +40,12 @@ export function getGitHubApp() {
   requireGitHubConfig();
 
   if (!appInstance) {
+    const ProxiedOctokit = Octokit.defaults({
+      request: {
+        fetch: octokitFetch,
+      },
+    });
+
     appInstance = new App({
       appId: env.GITHUB_APP_ID!,
       privateKey: env.GITHUB_APP_PRIVATE_KEY!,
@@ -46,6 +53,7 @@ export function getGitHubApp() {
         clientId: env.GITHUB_APP_CLIENT_ID!,
         clientSecret: env.GITHUB_APP_CLIENT_SECRET!,
       },
+      Octokit: ProxiedOctokit,
       webhooks: {
         secret: env.GITHUB_WEBHOOK_SECRET ?? "disabled",
       },
@@ -68,19 +76,30 @@ export function buildGitHubUserAuthorizationUrl(state: string) {
 export async function exchangeCodeForUserToken(code: string): Promise<TokenExchangeResult> {
   requireGitHubConfig();
 
-  const response = await fetch("https://github.com/login/oauth/access_token", {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      client_id: env.GITHUB_APP_CLIENT_ID,
-      client_secret: env.GITHUB_APP_CLIENT_SECRET,
-      code,
-      redirect_uri: `${env.APP_BASE_URL}/api/auth/github/callback`,
-    }),
-  });
+  let response: Response;
+
+  try {
+    response = await outboundFetch("https://github.com/login/oauth/access_token", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        client_id: env.GITHUB_APP_CLIENT_ID,
+        client_secret: env.GITHUB_APP_CLIENT_SECRET,
+        code,
+        redirect_uri: `${env.APP_BASE_URL}/api/auth/github/callback`,
+      }),
+    });
+  } catch (error) {
+    // Most common in restricted networks: cannot establish TCP connection to github.com:443.
+    throw new AppError(
+      "GITHUB_NETWORK_UNREACHABLE",
+      502,
+      "无法连接 GitHub（github.com:443）。请检查网络/VPN/代理（HTTPS_PROXY）后重试。",
+    );
+  }
 
   if (!response.ok) {
     throw new AppError("GITHUB_TOKEN_EXCHANGE_FAILED", 502, "GitHub 登录换取令牌失败");
@@ -113,7 +132,12 @@ export async function exchangeCodeForUserToken(code: string): Promise<TokenExcha
 }
 
 export async function getGitHubUser(userToken: string): Promise<GitHubUser> {
-  const octokit = new Octokit({ auth: userToken });
+  const octokit = new Octokit({
+    auth: userToken,
+    request: {
+      fetch: octokitFetch,
+    },
+  });
   const { data } = await octokit.rest.users.getAuthenticated();
 
   return {
@@ -126,7 +150,12 @@ export async function getGitHubUser(userToken: string): Promise<GitHubUser> {
 }
 
 export async function listUserInstallations(userToken: string) {
-  const octokit = new Octokit({ auth: userToken });
+  const octokit = new Octokit({
+    auth: userToken,
+    request: {
+      fetch: octokitFetch,
+    },
+  });
   const { data } = await octokit.request("GET /user/installations");
 
   return data.installations.map((installation) => {
@@ -151,7 +180,17 @@ export async function listUserInstallations(userToken: string) {
 
 export async function getInstallationOctokit(installationId: string) {
   const app = getGitHubApp();
-  return app.getInstallationOctokit(Number(installationId));
+  const parsedInstallationId = Number(installationId);
+
+  if (!Number.isInteger(parsedInstallationId) || parsedInstallationId <= 0) {
+    throw new AppError(
+      "GITHUB_INSTALLATION_INVALID",
+      503,
+      "当前仓库的 GitHub 安装信息无效，请重新完成 GitHub App 安装授权",
+    );
+  }
+
+  return app.getInstallationOctokit(parsedInstallationId);
 }
 
 export async function listInstallationRepositories(options: {

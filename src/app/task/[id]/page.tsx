@@ -5,13 +5,13 @@ import { ArrowUpRight, Clock3, FileStack, GitPullRequestArrow, TriangleAlert } f
 import { AppShell } from "@/components/layout/app-shell";
 import { MetricCard } from "@/components/mvp/metric-card";
 import { PreviewStudio } from "@/components/mvp/preview-studio";
+import { TaskProgressPoller } from "@/components/mvp/task-progress-poller";
 import { TaskStatusBadge } from "@/components/mvp/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { formatDateTime, formatDuration } from "@/lib/format";
-import { getLanguageLabel, getRepoDetail, getTaskDetail, getTaskPreviews, getTaskProgress } from "@/modules/mvp/mock-data";
+import { getTaskPageData, isNotFoundError } from "@/modules/mvp/page-data";
 
 type TaskPageProps = {
   params: Promise<{ id: string }>;
@@ -19,20 +19,19 @@ type TaskPageProps = {
 
 export default async function TaskPage({ params }: TaskPageProps) {
   const { id } = await params;
-  const task = await getTaskDetail(id);
+  let task;
+  let repo;
+  let progress;
+  let previews;
 
-  if (!task) {
-    notFound();
-  }
+  try {
+    ({ task, repo, progress, previews } = await getTaskPageData(id));
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      notFound();
+    }
 
-  const [repo, progress, previews] = await Promise.all([
-    getRepoDetail(task.repoId),
-    getTaskProgress(task.id),
-    getTaskPreviews(task.id),
-  ]);
-
-  if (!repo || !progress) {
-    notFound();
+    throw error;
   }
 
   return (
@@ -79,37 +78,12 @@ export default async function TaskPage({ params }: TaskPageProps) {
 
       <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <Badge variant="default">任务轮询状态</Badge>
-                  <CardTitle className="mt-3">进度与当前处理位置</CardTitle>
-                </div>
-                <TaskStatusBadge status={task.status} />
-              </div>
-              <CardDescription>MVP 前端按 `GET /api/tasks/:taskId/progress` 的语义组织轮询结果。</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <Progress value={progress.percent} />
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-[24px] border border-ink/8 bg-white/80 p-4 text-sm leading-7 text-ink-soft">
-                  <p><span className="font-medium text-ink">当前语言：</span>{task.currentLanguage ? getLanguageLabel(task.currentLanguage) : "已结束"}</p>
-                  <p><span className="font-medium text-ink">当前文件：</span>{task.currentFile ?? "无"}</p>
-                </div>
-                <div className="rounded-[24px] border border-ink/8 bg-white/80 p-4 text-sm leading-7 text-ink-soft">
-                  <p><span className="font-medium text-ink">触发方式：</span>{task.triggerSource}</p>
-                  <p><span className="font-medium text-ink">仓库：</span>{repo.fullName}</p>
-                </div>
-              </div>
-              <div className="rounded-[24px] border border-brand-100 bg-brand-50/70 p-4">
-                <p className="text-sm font-medium text-brand-800">README 导航预览</p>
-                <pre className="mt-3 whitespace-pre-wrap text-sm leading-7 text-brand-900/90">
-                  {task.readmeNavigationPreview}
-                </pre>
-              </div>
-            </CardContent>
-          </Card>
+          <TaskProgressPoller
+            initialProgress={progress}
+            repoFullName={repo.fullName}
+            task={task}
+            taskId={task.id}
+          />
 
           <Card>
             <CardHeader>

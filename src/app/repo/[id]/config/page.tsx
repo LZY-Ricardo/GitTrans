@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { ConfigEditor } from "@/components/mvp/config-editor";
 import { Button } from "@/components/ui/button";
-import { getBootstrapPayload, getRepoConfig, getRepoDetail, getRepoFiles } from "@/modules/mvp/mock-data";
+import { getRepoConfigPageData, isNotFoundError } from "@/modules/mvp/page-data";
 
 type RepoConfigPageProps = {
   params: Promise<{ id: string }>;
@@ -12,15 +12,20 @@ type RepoConfigPageProps = {
 
 export default async function RepoConfigPage({ params }: RepoConfigPageProps) {
   const { id } = await params;
-  const [repo, config, files, bootstrap] = await Promise.all([
-    getRepoDetail(id),
-    getRepoConfig(id),
-    getRepoFiles(id),
-    getBootstrapPayload(),
-  ]);
+  let repo;
+  let config;
+  let files;
+  let filesError;
+  let bootstrap;
 
-  if (!repo || !config) {
-    notFound();
+  try {
+    ({ repo, config, files, filesError, bootstrap } = await getRepoConfigPageData(id));
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      notFound();
+    }
+
+    throw error;
   }
 
   return (
@@ -41,7 +46,7 @@ export default async function RepoConfigPage({ params }: RepoConfigPageProps) {
       eyebrow="Configuration Workspace"
       title={`${repo.fullName} · 翻译配置`}
     >
-      <ConfigEditor bootstrap={bootstrap} config={config} files={files} />
+      <ConfigEditor bootstrap={bootstrap} config={config} files={files} filesError={filesError} />
     </AppShell>
   );
 }

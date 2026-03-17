@@ -9,17 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
-import { getLanguageLabel, listImportableRepositories, listInstallations, listRepos } from "@/modules/mvp/mock-data";
+import { getLanguageLabel } from "@/modules/mvp/labels";
+import { getDashboardPageData } from "@/modules/mvp/page-data";
 
 export default async function DashboardPage() {
-  const [repos, installations, repositories] = await Promise.all([
-    listRepos(),
-    listInstallations(),
-    listImportableRepositories(),
-  ]);
+  const { repos, installations, installationsError, installUrl } = await getDashboardPageData();
 
   const uniqueLanguageCount = new Set(repos.flatMap((repo) => repo.targetLanguages)).size;
   const runningCount = repos.filter((repo) => repo.status === "running").length;
+  const primaryRepo = repos.find((repo) => repo.status === "running") ?? repos[0] ?? null;
 
   return (
     <AppShell
@@ -28,12 +26,14 @@ export default async function DashboardPage() {
           <Button asChild variant="secondary">
             <Link href="/settings">查看运行约束</Link>
           </Button>
-          <Button asChild>
-            <Link href="/repo/repo_456">
-              打开运行中仓库
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+          {primaryRepo ? (
+            <Button asChild>
+              <Link href={`/repo/${primaryRepo.id}`}>
+                打开当前仓库
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          ) : null}
         </>
       }
       description="仪表盘聚合仓库状态、当前 PR、最近同步时间和导入入口。布局保持信息密度，但不引入图表中心、团队管理等非 MVP 板块。"
@@ -42,7 +42,7 @@ export default async function DashboardPage() {
     >
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
-          detail="当前已经导入 3 个公共仓库，保持单仓库串行任务模型。"
+          detail={`当前已经导入 ${repos.length} 个公共仓库，保持单仓库串行任务模型。`}
           icon={<FolderGit2 className="h-5 w-5" />}
           label="已导入仓库"
           value={String(repos.length)}
@@ -78,58 +78,69 @@ export default async function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {repos.map((repo) => (
-              <div
-                key={repo.id}
-                className="rounded-[28px] border border-ink/8 bg-white/80 p-5 transition-colors hover:border-brand-200"
-              >
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <RepoStatusBadge status={repo.status} />
-                      <Badge variant="outline">{repo.baseBranch}</Badge>
-                      <Badge variant="muted">{repo.baseLanguage}</Badge>
+            {repos.length > 0 ? (
+              repos.map((repo) => (
+                <div
+                  key={repo.id}
+                  className="rounded-[28px] border border-ink/8 bg-white/80 p-5 transition-colors hover:border-brand-200"
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <RepoStatusBadge status={repo.status} />
+                        <Badge variant="outline">{repo.baseBranch}</Badge>
+                        <Badge variant="muted">{repo.baseLanguage}</Badge>
+                      </div>
+                      <div>
+                        <h2 className="font-serif text-2xl text-ink">{repo.fullName}</h2>
+                        <p className="text-sm leading-7 text-ink-soft">
+                          最近同步 {formatDateTime(repo.lastSyncedAt)} · 默认分支 {repo.defaultBranch}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {repo.targetLanguages.map((language) => (
+                          <Badge key={language} variant="outline">
+                            {getLanguageLabel(language)}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <h2 className="font-serif text-2xl text-ink">{repo.fullName}</h2>
-                      <p className="text-sm leading-7 text-ink-soft">
-                        最近同步 {formatDateTime(repo.lastSyncedAt)} · 默认分支 {repo.defaultBranch}
-                      </p>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {repo.targetLanguages.map((language) => (
-                        <Badge key={language} variant="outline">
-                          {getLanguageLabel(language)}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button asChild variant="outline">
-                      <Link href={`/repo/${repo.id}`}>仓库详情</Link>
-                    </Button>
-                    <Button asChild variant="secondary">
-                      <Link href={`/repo/${repo.id}/config`}>配置</Link>
-                    </Button>
-                    {repo.currentTask ? (
-                      <Button asChild>
-                        <Link href={`/task/${repo.currentTask.id}`}>任务详情</Link>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild variant="outline">
+                        <Link href={`/repo/${repo.id}`}>仓库详情</Link>
                       </Button>
-                    ) : null}
+                      <Button asChild variant="secondary">
+                        <Link href={`/repo/${repo.id}/config`}>配置</Link>
+                      </Button>
+                      {repo.currentTask ? (
+                        <Button asChild>
+                          <Link href={`/task/${repo.currentTask.id}`}>任务详情</Link>
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
+                  {repo.currentPrUrl ? (
+                    <div className="mt-4 rounded-[22px] border border-brand-100 bg-brand-50/70 px-4 py-3 text-sm text-brand-800">
+                      当前 PR：<a className="underline" href={repo.currentPrUrl} rel="noreferrer" target="_blank">{repo.currentPrUrl}</a>
+                    </div>
+                  ) : null}
                 </div>
-                {repo.currentPrUrl ? (
-                  <div className="mt-4 rounded-[22px] border border-brand-100 bg-brand-50/70 px-4 py-3 text-sm text-brand-800">
-                    当前 PR：<a className="underline" href={repo.currentPrUrl} rel="noreferrer" target="_blank">{repo.currentPrUrl}</a>
-                  </div>
-                ) : null}
+              ))
+            ) : (
+              <div className="rounded-[28px] border border-dashed border-ink/12 bg-white/80 p-6 text-sm leading-7 text-ink-soft">
+                <p className="font-medium text-ink">还没有导入任何仓库</p>
+                <p className="mt-2">先在右侧选择 GitHub App 安装并导入一个公共仓库，后续配置、任务和预览页面才会出现真实数据。</p>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
 
-        <ImportRepositoryPanel installations={installations} repositories={repositories} />
+        <ImportRepositoryPanel
+          installations={installations}
+          installationsError={installationsError}
+          installUrl={installUrl}
+        />
       </div>
     </AppShell>
   );

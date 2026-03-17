@@ -5,11 +5,13 @@ import { ArrowUpRight, Clock3, FolderTree, Languages, Sparkles } from "lucide-re
 import { AppShell } from "@/components/layout/app-shell";
 import { MetricCard } from "@/components/mvp/metric-card";
 import { RepoStatusBadge, TaskStatusBadge } from "@/components/mvp/status-badge";
+import { TaskLauncher } from "@/components/mvp/task-launcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
-import { getLanguageLabel, getRepoConfig, getRepoDetail, getRepoTasks } from "@/modules/mvp/mock-data";
+import { getLanguageLabel } from "@/modules/mvp/labels";
+import { getRepoPageData, isNotFoundError } from "@/modules/mvp/page-data";
 
 type RepoPageProps = {
   params: Promise<{ id: string }>;
@@ -17,14 +19,18 @@ type RepoPageProps = {
 
 export default async function RepoPage({ params }: RepoPageProps) {
   const { id } = await params;
-  const [repo, config, tasks] = await Promise.all([
-    getRepoDetail(id),
-    getRepoConfig(id),
-    getRepoTasks(id),
-  ]);
+  let repo;
+  let config;
+  let tasks;
 
-  if (!repo || !config) {
-    notFound();
+  try {
+    ({ repo, config, tasks } = await getRepoPageData(id));
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      notFound();
+    }
+
+    throw error;
   }
 
   return (
@@ -34,11 +40,10 @@ export default async function RepoPage({ params }: RepoPageProps) {
           <Button asChild variant="secondary">
             <Link href={`/repo/${repo.id}/config`}>进入配置页</Link>
           </Button>
-          {repo.latestTask ? (
-            <Button asChild>
-              <Link href={`/task/${repo.latestTask.id}`}>查看最近任务</Link>
-            </Button>
-          ) : null}
+          <TaskLauncher
+            canRunIncremental={Boolean(repo.syncState.lastSyncedSha)}
+            repoId={repo.id}
+          />
         </>
       }
       description="仓库详情页承担仓库状态总览、PR 去向、最近任务和配置快照。真正的“开始翻译”动作在后端接通后对应任务创建接口。"
@@ -159,36 +164,42 @@ export default async function RepoPage({ params }: RepoPageProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {tasks.map((task) => (
-              <div key={task.id} className="rounded-[24px] border border-ink/8 bg-white/80 p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <TaskStatusBadge status={task.status} />
-                      <Badge variant="outline">{task.type === "full" ? "全量翻译" : "增量翻译"}</Badge>
+            {tasks.length > 0 ? (
+              tasks.map((task) => (
+                <div key={task.id} className="rounded-[24px] border border-ink/8 bg-white/80 p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <TaskStatusBadge status={task.status} />
+                        <Badge variant="outline">{task.type === "full" ? "全量翻译" : "增量翻译"}</Badge>
+                      </div>
+                      <div>
+                        <p className="font-medium text-ink">{task.id}</p>
+                        <p className="text-sm text-ink-soft">
+                          {task.progressDone}/{task.progressTotal} 项 · 创建于 {formatDateTime(task.createdAt)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-ink">{task.id}</p>
-                      <p className="text-sm text-ink-soft">
-                        {task.progressDone}/{task.progressTotal} 项 · 创建于 {formatDateTime(task.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {task.prUrl ? (
-                      <Button asChild size="sm" variant="secondary">
-                        <a href={task.prUrl} rel="noreferrer" target="_blank">
-                          查看 PR
-                        </a>
+                    <div className="flex flex-wrap gap-2">
+                      {task.prUrl ? (
+                        <Button asChild size="sm" variant="secondary">
+                          <a href={task.prUrl} rel="noreferrer" target="_blank">
+                            查看 PR
+                          </a>
+                        </Button>
+                      ) : null}
+                      <Button asChild size="sm">
+                        <Link href={`/task/${task.id}`}>任务详情</Link>
                       </Button>
-                    ) : null}
-                    <Button asChild size="sm">
-                      <Link href={`/task/${task.id}`}>任务详情</Link>
-                    </Button>
+                    </div>
                   </div>
                 </div>
+              ))
+            ) : (
+              <div className="rounded-[24px] border border-dashed border-ink/12 bg-white/80 p-5 text-sm leading-7 text-ink-soft">
+                当前仓库还没有任务记录。可以直接在页头创建一次全量翻译任务。
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>

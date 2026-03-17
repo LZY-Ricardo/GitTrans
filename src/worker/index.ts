@@ -1,8 +1,5 @@
-import { config } from "dotenv";
+import "dotenv/config";
 import { hostname } from "node:os";
-
-// 加载环境变量
-config();
 
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";

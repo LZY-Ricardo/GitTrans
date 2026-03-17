@@ -9,7 +9,7 @@ export type DemoSession = {
     avatarUrl: string;
   };
   githubApp: {
-    installUrl: string;
+    installUrl: string | null;
   };
 };
 
@@ -26,7 +26,7 @@ export type InstallationSummary = {
   installationId: string;
   accountLogin: string;
   accountType: string;
-  repositoriesCount: number;
+  repositoriesCount: number | null;
   installUrl: string;
 };
 
@@ -105,7 +105,7 @@ export type FileTreeItem = {
   translatable: boolean;
   selected: boolean;
   ignored: boolean;
-  reason?: string;
+  reason?: string | null;
 };
 
 export type TaskSummary = {

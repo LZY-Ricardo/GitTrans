@@ -1,4 +1,4 @@
-import { TaskStatus, TaskType, TriggerSource } from "@prisma/client";
+import { TaskItemStatus, TaskStatus, TaskType, TriggerSource } from "@prisma/client";
 
 import { AppError } from "@/lib/errors";
 import { prisma } from "@/lib/prisma";
@@ -186,4 +186,31 @@ export async function getTaskPreview(options: {
     sourceContent: item.sourceContent,
     translatedContent: item.translatedContent
   };
+}
+
+export async function listTaskPreviews(taskId: string, userId: string) {
+  await getTaskForUser(taskId, userId);
+
+  const items = await prisma.translationTaskItem.findMany({
+    where: {
+      taskId,
+      status: TaskItemStatus.succeeded,
+      sourceContent: {
+        not: null
+      },
+      translatedContent: {
+        not: null
+      }
+    },
+    orderBy: [{ filePath: "asc" }, { language: "asc" }],
+    take: 12
+  });
+
+  return items.map((item) => ({
+    sourcePath: item.filePath,
+    targetLanguage: item.language,
+    targetPath: item.outputPath ?? "",
+    sourceContent: item.sourceContent ?? "",
+    translatedContent: item.translatedContent ?? ""
+  }));
 }
