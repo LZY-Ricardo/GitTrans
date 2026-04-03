@@ -16,6 +16,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+modelcontextprotocol/
+docs/superpowers/
 
 # 敏感文件
 private-key.pem
