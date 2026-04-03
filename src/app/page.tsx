@@ -44,13 +44,13 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </div>
             <div>
               <p className="font-serif text-xl text-ink">GitTrans</p>
-              <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">SaaS MVP Frontend</p>
+              <p className="text-xs uppercase tracking-[0.3em] text-ink-soft">文档翻译平台</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <Button asChild>
               <Link href="/dashboard">
-                进入演示控制台
+                进入控制台
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -66,7 +66,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <section className="hero-mesh mt-8 overflow-hidden rounded-[40px] border border-white/70 px-6 py-10 shadow-[0_32px_100px_rgba(71,28,19,0.08)] md:px-10 md:py-14">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-6">
-              <p className="section-eyebrow">Zero-config Translation Loop</p>
+              <p className="section-eyebrow">GitHub 文档多语言管理</p>
               <div className="space-y-5">
                 <h1 className="max-w-4xl font-serif text-5xl leading-tight text-ink md:text-7xl">
                   让 GitHub 文档仓库
@@ -77,20 +77,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <div className="flex flex-wrap items-center gap-3">
                 <Button asChild size="lg">
                   <Link href="/dashboard">
-                    查看仓库工作台
+                    查看控制台
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button asChild size="lg" variant="secondary">
-                  <Link href="/settings">查看账户与运行边界</Link>
+                  <Link href="/settings">查看产品设置</Link>
                 </Button>
               </div>
 
               <div className="grid gap-3 md:grid-cols-3">
                 {[
-                  { value: "6", label: "页面路由" },
-                  { value: "17", label: "MVP 接口映射" },
-                  { value: "1", label: "中国红主色体系" },
+                  { value: "6", label: "核心页面" },
+                  { value: "17", label: "核心能力覆盖" },
+                  { value: "1", label: "视觉主题" },
                 ].map((item) => (
                   <div key={item.label} className="rounded-[28px] border border-white/70 bg-white/78 p-5">
                     <p className="font-serif text-4xl text-brand-700">{item.value}</p>
@@ -104,20 +104,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               <CardHeader>
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    <Badge variant="default">MVP 流程</Badge>
-                    <CardTitle className="mt-3 text-3xl">工作流</CardTitle>
+                    <Badge variant="default">使用流程</Badge>
+                    <CardTitle className="mt-3 text-3xl">开始使用</CardTitle>
                   </div>
                   <Sparkles className="h-5 w-5 text-brand-700" />
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 {[
-                  "GitHub 登录 / 安装 GitHub App",
-                  "导入公共仓库并拉取文件树",
-                  "选择目标语言、模型和路径范围",
-                  "触发全量或增量翻译任务",
-                  "查看 README 导航预览与单文件结果",
-                  "跳转到 GitHub Pull Request",
+                  "连接 GitHub 账号并完成授权",
+                  "导入仓库并同步文档内容",
+                  "配置目标语言与翻译范围",
+                  "发起文档翻译任务",
+                  "查看翻译结果与导航预览",
+                  "回到 GitHub 查看变更记录",
                 ].map((step, index) => (
                   <div
                     key={step}
