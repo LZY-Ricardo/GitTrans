@@ -48,10 +48,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Badge variant="outline">中国红主题</Badge>
-            <Button asChild variant="ghost">
-              <Link href="/settings">MVP 边界</Link>
-            </Button>
             <Button asChild>
               <Link href="/dashboard">
                 进入演示控制台
