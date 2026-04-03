@@ -7,7 +7,7 @@ import { MetricCard } from "@/components/mvp/metric-card";
 import { RepoStatusBadge } from "@/components/mvp/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
 import { getLanguageLabel } from "@/modules/mvp/labels";
 import { getDashboardPageData } from "@/modules/mvp/page-data";
@@ -36,25 +36,22 @@ export default async function DashboardPage() {
           ) : null}
         </>
       }
-      description="仪表盘聚合仓库状态、当前 PR、最近同步时间和导入入口。布局保持信息密度，但不引入图表中心、团队管理等非 MVP 板块。"
+      description=""
       eyebrow="Repository Control Room"
       title="以仓库为中心的翻译控制台"
     >
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
-          detail={`当前已经导入 ${repos.length} 个公共仓库，保持单仓库串行任务模型。`}
           icon={<FolderGit2 className="h-5 w-5" />}
           label="已导入仓库"
           value={String(repos.length)}
         />
         <MetricCard
-          detail="运行态任务与仓库状态同步展示，便于快速回到处理中断点。"
           icon={<Rocket className="h-5 w-5" />}
           label="运行中任务"
           value={String(runningCount)}
         />
         <MetricCard
-          detail="语言列表来自 bootstrap 接口，不在前端硬编码。"
           icon={<Languages className="h-5 w-5" />}
           label="目标语言"
           value={String(uniqueLanguageCount)}
@@ -67,15 +64,12 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <Badge variant="default">已导入仓库</Badge>
-                <CardTitle className="mt-3">仓库列表与快速跳转</CardTitle>
+                <CardTitle className="mt-3">仓库列表</CardTitle>
               </div>
               <div className="rounded-full bg-brand-50 p-3 text-brand-700">
                 <GitPullRequestArrow className="h-5 w-5" />
               </div>
             </div>
-            <CardDescription>
-              每张卡片只保留 MVP 必需信息：仓库名、基础分支、目标语言、最近同步、当前 PR 与最近任务。
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {repos.length > 0 ? (
@@ -93,9 +87,7 @@ export default async function DashboardPage() {
                       </div>
                       <div>
                         <h2 className="font-serif text-2xl text-ink">{repo.fullName}</h2>
-                        <p className="text-sm leading-7 text-ink-soft">
-                          最近同步 {formatDateTime(repo.lastSyncedAt)} · 默认分支 {repo.defaultBranch}
-                        </p>
+                        <p className="text-sm leading-7 text-ink-soft">{formatDateTime(repo.lastSyncedAt)}</p>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {repo.targetLanguages.map((language) => (
@@ -122,7 +114,7 @@ export default async function DashboardPage() {
                   </div>
                   {repo.currentPrUrl ? (
                     <div className="mt-4 rounded-[22px] border border-brand-100 bg-brand-50/70 px-4 py-3 text-sm text-brand-800">
-                      当前 PR：<a className="underline" href={repo.currentPrUrl} rel="noreferrer" target="_blank">{repo.currentPrUrl}</a>
+                      <a className="underline" href={repo.currentPrUrl} rel="noreferrer" target="_blank">查看 PR</a>
                     </div>
                   ) : null}
                 </div>
@@ -130,7 +122,6 @@ export default async function DashboardPage() {
             ) : (
               <div className="rounded-[28px] border border-dashed border-ink/12 bg-white/80 p-6 text-sm leading-7 text-ink-soft">
                 <p className="font-medium text-ink">还没有导入任何仓库</p>
-                <p className="mt-2">先在右侧选择 GitHub App 安装并导入一个公共仓库，后续配置、任务和预览页面才会出现真实数据。</p>
               </div>
             )}
           </CardContent>

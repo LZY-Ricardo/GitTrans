@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/errors";
 import { env, hasOpenRouterConfig } from "@/lib/env";
 import { outboundFetch } from "@/lib/outbound-fetch";
+import { getFallbackModels } from "@/modules/translation/model-routing";
 
 const CODE_FENCE_REGEX = /```[\s\S]*?```/g;
 const MAX_CHARS_PER_CHUNK = 3500;
@@ -92,6 +93,7 @@ async function translateChunk(options: {
     },
     body: JSON.stringify({
       model: options.modelId,
+      models: getFallbackModels(options.modelId),
       messages: [
         { role: "system", content: systemPrompt },
         {
@@ -105,10 +107,14 @@ async function translateChunk(options: {
 
   if (!response.ok) {
     const errorText = await response.text();
+    const regionHint =
+      response.status === 403 && /not available in your region/i.test(errorText)
+        ? "；当前模型在所在区域不可用，请切换到 OpenRouter Auto 或其他可用模型"
+        : "";
     throw new AppError(
       "OPENROUTER_TRANSLATION_FAILED",
       502,
-      `OpenRouter 翻译失败: ${errorText.slice(0, 200)}`
+      `OpenRouter 翻译失败: ${errorText.slice(0, 200)}${regionHint}`
     );
   }
 

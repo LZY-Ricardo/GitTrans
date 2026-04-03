@@ -6,7 +6,7 @@ import { CheckCheck, GitFork, Languages, Save, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requestApi } from "@/lib/client-api";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -88,15 +88,12 @@ export function ConfigEditor({ config, bootstrap, files, filesError }: ConfigEdi
           <div className="flex items-center justify-between gap-3">
             <div>
               <Badge variant="default">翻译配置</Badge>
-              <CardTitle className="mt-3">最小闭环字段已按接口文档对齐</CardTitle>
+              <CardTitle className="mt-3">翻译配置</CardTitle>
             </div>
             <div className="rounded-full bg-brand-50 p-3 text-brand-700">
               <Sparkles className="h-5 w-5" />
             </div>
           </div>
-          <CardDescription>
-            配置页覆盖基准分支、语言、模型、范围、ignore 规则和 README 导航开关，不加入 BYOK 与自动同步等非 MVP 功能。
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-5 md:grid-cols-2">
@@ -182,7 +179,6 @@ export function ConfigEditor({ config, bootstrap, files, filesError }: ConfigEdi
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-medium text-ink">README 导航区</p>
-                <p className="text-sm text-ink-soft">任务详情页会直接显示导航区预览</p>
               </div>
               <button
                 aria-pressed={readmeNavigationEnabled}
@@ -217,9 +213,6 @@ export function ConfigEditor({ config, bootstrap, files, filesError }: ConfigEdi
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">文件范围</CardTitle>
-            <CardDescription>
-              自动突出显示可翻译、已选择和被 ignore 排除的文件状态。
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {filesError ? (
@@ -229,7 +222,7 @@ export function ConfigEditor({ config, bootstrap, files, filesError }: ConfigEdi
             ) : null}
             {files.length === 0 ? (
               <div className="rounded-[22px] border border-dashed border-ink/12 bg-white/80 px-4 py-6 text-sm leading-7 text-ink-soft">
-                当前还没有可展示的仓库文件树。基础配置仍然可以保存，等 GitHub 安装与仓库权限就绪后再读取实时文件列表。
+                暂无文件树
               </div>
             ) : null}
             {files.map((item) => (
@@ -259,8 +252,8 @@ export function ConfigEditor({ config, bootstrap, files, filesError }: ConfigEdi
                     {item.ignored
                       ? "已被 ignore 规则排除"
                       : item.translatable
-                        ? "Markdown 文件，可纳入翻译范围"
-                        : "目录或非 Markdown 项"}
+                        ? "Markdown"
+                        : "目录或非 Markdown"}
                   </p>
                 </div>
                 {item.ignored ? <Badge variant="danger">Ignored</Badge> : null}
@@ -272,7 +265,6 @@ export function ConfigEditor({ config, bootstrap, files, filesError }: ConfigEdi
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">保存状态</CardTitle>
-            <CardDescription>保存会直接调用 `PUT /api/repos/:repoId/config`。</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-[24px] border border-brand-100 bg-brand-50/70 p-4 text-sm leading-7 text-ink-soft">
@@ -288,18 +280,14 @@ export function ConfigEditor({ config, bootstrap, files, filesError }: ConfigEdi
               {isSaving ? "保存中..." : "保存配置"}
               <Save className="h-4 w-4" />
             </Button>
-            <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-4 text-sm leading-7 text-emerald-700">
-              <p className="font-medium">MVP 边界确认</p>
-              <p>平台托管 Key 已固定为开启；BYOK、失败重试、Webhook 开关均不出现在当前页面。</p>
-            </div>
             <div className="rounded-[24px] border border-ink/8 bg-white/80 p-4 text-sm leading-7 text-ink-soft">
               <div className="mb-2 flex items-center gap-2 text-ink">
                 <CheckCheck className="h-4 w-4 text-brand-700" />
-                表单校验约束
+                校验
               </div>
-              <p>`targetLanguages` 至少保留 1 个。</p>
-              <p>`includePaths` 至少保留 1 项。</p>
-              <p>`ignoreRulesText` 按纯文本编辑即可，不需要结构化对象。</p>
+              <p>目标语言至少 1 个。</p>
+              <p>Include 路径至少 1 项。</p>
+              <p>Ignore 规则为纯文本。</p>
             </div>
           </CardContent>
         </Card>

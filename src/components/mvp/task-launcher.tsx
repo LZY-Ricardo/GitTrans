@@ -64,12 +64,7 @@ export function TaskLauncher({ repoId, canRunIncremental }: TaskLauncherProps) {
           )}
         </Button>
       </div>
-      <p className="text-sm leading-6 text-ink-soft">
-        {message ??
-          (canRunIncremental
-            ? "全量与增量任务都会通过后端任务接口创建，然后跳转到任务详情页。"
-            : "增量同步需要先完成一次成功同步，拿到最近一次同步的基准 SHA。")}
-      </p>
+      {message ? <p className="text-sm leading-6 text-ink-soft">{message}</p> : null}
     </div>
   );
 }

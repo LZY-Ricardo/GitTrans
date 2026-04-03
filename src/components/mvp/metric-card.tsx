@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 type MetricCardProps = {
   label: string;
   value: string;
-  detail: string;
+  detail?: string;
   icon: ReactNode;
 };
 
@@ -21,7 +21,7 @@ export function MetricCard({ label, value, detail, icon }: MetricCardProps) {
         </div>
         <CardTitle className="text-3xl">{value}</CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 text-sm leading-6 text-ink-soft">{detail}</CardContent>
+      {detail ? <CardContent className="pt-0 text-sm leading-6 text-ink-soft">{detail}</CardContent> : null}
     </Card>
   );
 }

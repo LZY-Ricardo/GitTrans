@@ -4,16 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -p 3123",
-    "build": "prisma generate && next build",
-    "start": "next start",
+    "dev": "cross-env NEXT_DIST_DIR=.next-dev next dev -p 3123",
+    "build": "cross-env NEXT_DIST_DIR=.next-prod prisma generate && next build",
+    "start": "cross-env NEXT_DIST_DIR=.next-prod node .next-prod/standalone/server.js",
     "worker": "tsx src/worker/index.ts",
     "worker:once": "cross-env WORKER_RUN_ONCE=1 tsx src/worker/index.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "check": "prisma validate && next build"
+    "check": "cross-env NEXT_DIST_DIR=.next-prod prisma validate && next build"
   },
   "dependencies": {
     "@next/env": "^15.1.11",

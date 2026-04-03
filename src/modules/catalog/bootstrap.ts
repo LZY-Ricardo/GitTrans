@@ -36,10 +36,16 @@ export const LANGUAGE_OPTIONS: LanguageOption[] = [
 
 export const MODEL_OPTIONS: ModelOption[] = [
   {
+    id: "openrouter/auto",
+    name: "OpenRouter Auto",
+    provider: "openrouter",
+    recommended: true
+  },
+  {
     id: "openai/gpt-5.2",
     name: "GPT-5.2",
     provider: "openrouter",
-    recommended: true
+    recommended: false
   }
 ];
 

@@ -16,6 +16,7 @@ import {
 import { buildGitTransConfigFile } from "@/modules/repos/config-file";
 import { translateMarkdown } from "@/modules/translation/markdown";
 import { updateReadmeNavigation } from "@/modules/translation/readme-navigation";
+import { deriveTaskResult } from "@/modules/worker/task-result";
 
 type RunnableTask = Awaited<ReturnType<typeof claimNextTask>>;
 
@@ -279,9 +280,10 @@ async function processTask(task: NonNullable<RunnableTask>) {
     orderBy: [{ filePath: "asc" }, { language: "asc" }]
   });
 
-  const fileWrites: Array<{ path: string; content?: string; delete?: boolean }> = [];
+  const artifactWrites: Array<{ path: string; content?: string; delete?: boolean }> = [];
   let progressDone = 0;
   let progressFailed = 0;
+  let firstItemError: string | null = null;
 
   for (const item of taskItems) {
     try {
@@ -321,7 +323,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
         }
       });
 
-      fileWrites.push({
+      artifactWrites.push({
         path: item.outputPath ?? buildOutputPath(item.language, item.filePath),
         content: translatedContent
       });
@@ -333,6 +335,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : "翻译任务项执行失败";
+      firstItemError ??= message;
 
       await prisma.translationTaskItem.update({
         where: { id: item.id },
@@ -352,7 +355,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
 
   for (const deletedFile of source.deletedFiles) {
     for (const language of targetLanguages) {
-      fileWrites.push({
+      artifactWrites.push({
         path: buildOutputPath(language, deletedFile),
         delete: true
       });
@@ -362,7 +365,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
   const includesReadme = source.changedFiles.includes("README.md");
   let readmeNavigationPreview: string | null = null;
 
-  if (config.readmeNavigationEnabled && includesReadme) {
+  if (config.readmeNavigationEnabled && includesReadme && progressDone > 0) {
     const sourceReadme = await getFileContent({
       installationId: repo.installation.installationId,
       owner: repo.owner,
@@ -374,11 +377,18 @@ async function processTask(task: NonNullable<RunnableTask>) {
     const updatedReadme = updateReadmeNavigation(sourceReadme, targetLanguages);
     readmeNavigationPreview = updatedReadme;
 
-    fileWrites.push({
+    artifactWrites.push({
       path: "README.md",
       content: updatedReadme
     });
   }
+
+  const taskResult = deriveTaskResult({
+    progressDone,
+    progressFailed,
+    firstItemError,
+    hasFileMutations: artifactWrites.length > 0
+  });
 
   const configYaml = buildGitTransConfigFile({
     repo: repo.fullName,
@@ -392,19 +402,21 @@ async function processTask(task: NonNullable<RunnableTask>) {
     translationBranch: repo.translationBranch
   });
 
-  fileWrites.push(
-    {
-      path: ".gittrans.yml",
-      content: configYaml
-    },
-    {
-      path: ".github-global-ignore",
-      content: config.ignoreRulesText
-    }
-  );
+  const fileWrites = taskResult.shouldPublishArtifacts
+    ? artifactWrites.concat([
+        {
+          path: ".gittrans.yml",
+          content: configYaml
+        },
+        {
+          path: ".github-global-ignore",
+          content: config.ignoreRulesText
+        }
+      ])
+    : artifactWrites;
 
   let prUrl: string | null = null;
-  let finalStatus: TaskStatus = TaskStatus.succeeded;
+  const finalStatus = taskResult.finalStatus;
 
   if (fileWrites.length > 0) {
     const commit = await commitFilesToBranch({
@@ -464,10 +476,6 @@ async function processTask(task: NonNullable<RunnableTask>) {
     });
   }
 
-  if (progressDone === 0 && progressFailed > 0) {
-    finalStatus = TaskStatus.failed;
-  }
-
   await prisma.repositorySyncState.upsert({
     where: { repoId: repo.id },
     create: {
@@ -491,7 +499,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
     prUrl,
     commitRange: source.commitRange,
     readmeNavigationPreview,
-    errorSummary: finalStatus === TaskStatus.failed ? "全部翻译任务项均失败" : null
+    errorSummary: taskResult.errorSummary
   });
 
   await markRepositoryReady(repo.id);

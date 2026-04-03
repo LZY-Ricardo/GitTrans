@@ -42,7 +42,7 @@ export default async function RepoConfigPage({ params }: RepoConfigPageProps) {
           ) : null}
         </>
       }
-      description="配置页对齐 `GET/PUT /api/repos/:repoId/config` 与 `GET /api/repos/:repoId/files`，所有字段都能直接映射到后端契约。"
+      description=""
       eyebrow="Configuration Workspace"
       title={`${repo.fullName} · 翻译配置`}
     >

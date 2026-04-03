@@ -8,7 +8,7 @@ import { RepoStatusBadge, TaskStatusBadge } from "@/components/mvp/status-badge"
 import { TaskLauncher } from "@/components/mvp/task-launcher";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime } from "@/lib/format";
 import { getLanguageLabel } from "@/modules/mvp/labels";
 import { getRepoPageData, isNotFoundError } from "@/modules/mvp/page-data";
@@ -46,25 +46,31 @@ export default async function RepoPage({ params }: RepoPageProps) {
           />
         </>
       }
-      description="仓库详情页承担仓库状态总览、PR 去向、最近任务和配置快照。真正的“开始翻译”动作在后端接通后对应任务创建接口。"
+      description=""
       eyebrow="Repository Detail"
       title={repo.fullName}
     >
       <div className="grid gap-4 md:grid-cols-3">
         <MetricCard
-          detail="仓库级状态与任务状态分开表达，避免前端误把“任务失败”当成“仓库不可用”。"
           icon={<Sparkles className="h-5 w-5" />}
           label="仓库状态"
           value={repo.status === "ready" ? "Ready" : repo.status === "running" ? "Running" : "Attention"}
         />
         <MetricCard
-          detail={`最近同步 ${formatDateTime(repo.syncState.lastSyncedAt)}，记录最近一次成功同步的基准 SHA。`}
+          detail={
+            repo.syncState.lastSyncedSha && repo.syncState.lastSyncedAt
+              ? `${repo.syncState.lastSyncedSha.slice(0, 7)} · ${formatDateTime(repo.syncState.lastSyncedAt)}`
+              : repo.syncState.lastSyncedSha
+                ? repo.syncState.lastSyncedSha.slice(0, 7)
+                : repo.syncState.lastSyncedAt
+                  ? formatDateTime(repo.syncState.lastSyncedAt)
+                  : undefined
+          }
           icon={<Clock3 className="h-5 w-5" />}
           label="最近同步"
-          value={repo.syncState.lastSyncedSha ?? "未同步"}
+          value={repo.syncState.lastSyncedAt ? formatDateTime(repo.syncState.lastSyncedAt) : "未同步"}
         />
         <MetricCard
-          detail={`当前输出固定写入 ${config.outputRoot}/{lang}/...`}
           icon={<FolderTree className="h-5 w-5" />}
           label="目标语言"
           value={`${repo.targetLanguages.length} 个`}
@@ -78,11 +84,10 @@ export default async function RepoPage({ params }: RepoPageProps) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <Badge variant="default">仓库概览</Badge>
-                  <CardTitle className="mt-3">只展示前端需要做决定的信息</CardTitle>
+                  <CardTitle className="mt-3">仓库概览</CardTitle>
                 </div>
                 <RepoStatusBadge status={repo.status} />
               </div>
-              <CardDescription>翻译分支、当前 PR 和最近任务都在顶部完成汇总。</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm leading-7 text-ink-soft">
               <div className="rounded-[24px] border border-ink/8 bg-white/80 p-4">
@@ -121,7 +126,6 @@ export default async function RepoPage({ params }: RepoPageProps) {
           <Card>
             <CardHeader>
               <CardTitle className="text-2xl">配置快照</CardTitle>
-              <CardDescription>这里复用配置页中的核心字段，帮助用户在触发任务前再次确认。</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               <div className="rounded-[24px] border border-ink/8 bg-white/80 p-4 text-sm leading-7 text-ink-soft">
@@ -154,14 +158,8 @@ export default async function RepoPage({ params }: RepoPageProps) {
                 <Badge variant="default">最近任务</Badge>
                 <CardTitle className="mt-3">任务流转历史</CardTitle>
               </div>
-              <div className="flex items-center gap-2 text-sm text-ink-soft">
-                <Languages className="h-4 w-4 text-brand-700" />
-                MVP 先按轮询视图呈现
-              </div>
+              <Languages className="h-4 w-4 text-brand-700" />
             </div>
-            <CardDescription>
-              当前页面只保留任务类型、状态、进度、创建时间和 PR 链接，避免演变成复杂的运维控制台。
-            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {tasks.length > 0 ? (
@@ -197,7 +195,7 @@ export default async function RepoPage({ params }: RepoPageProps) {
               ))
             ) : (
               <div className="rounded-[24px] border border-dashed border-ink/12 bg-white/80 p-5 text-sm leading-7 text-ink-soft">
-                当前仓库还没有任务记录。可以直接在页头创建一次全量翻译任务。
+                暂无任务记录
               </div>
             )}
           </CardContent>

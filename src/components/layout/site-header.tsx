@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, LayoutDashboard, Settings } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getCurrentSessionPayload } from "@/modules/mvp/page-data";
 
@@ -45,7 +44,6 @@ export async function SiteHeader() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Badge variant="outline">平台托管 Key</Badge>
           {session ? (
             <>
               <div className="hidden text-right sm:block">

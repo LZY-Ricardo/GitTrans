@@ -11,6 +11,7 @@ import {
   listInstallationRepositories,
   listUserInstallations
 } from "@/modules/github/github-service";
+import { DEFAULT_MODEL_ID } from "@/modules/translation/model-routing";
 
 const UpdateRepositoryConfigSchema = z.object({
   baseBranch: z.string().min(1),
@@ -29,7 +30,7 @@ function getDefaultConfig(defaultBranch: string) {
     targetLanguages: ["en"],
     includePaths: ["README.md", "docs/**"],
     ignoreRulesText: "",
-    modelId: MODEL_OPTIONS[0].id,
+    modelId: DEFAULT_MODEL_ID,
     outputRoot: "translations",
     readmeNavigationEnabled: true,
     usePlatformKey: true

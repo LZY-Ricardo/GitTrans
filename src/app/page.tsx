@@ -3,7 +3,7 @@ import { ArrowRight, FolderGit2, Languages, Sparkles, Workflow } from "lucide-re
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type HomePageProps = {
   searchParams?: Promise<{ error?: string }>;
@@ -11,18 +11,15 @@ type HomePageProps = {
 
 const valueProps = [
   {
-    title: "接 GitHub，不接命令行",
-    description: "用登录、安装、仓库导入和配置页完成首次接入，避免要求用户理解 Actions 或 CI。",
+    title: "GitHub 接入",
     icon: FolderGit2,
   },
   {
-    title: "多语言输出固定",
-    description: "MVP 只处理 Markdown / README，并统一写入 translations/{lang}/... 结构。",
+    title: "多语言输出",
     icon: Languages,
   },
   {
-    title: "同步链路可追踪",
-    description: "任务详情页直接暴露进度、当前文件、README 导航预览和 PR 去向。",
+    title: "任务可追踪",
     icon: Workflow,
   },
 ];
@@ -79,10 +76,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                   让 GitHub 文档仓库
                   <span className="paper-accent"> 在一个工作台里完成多语言接入</span>
                 </h1>
-                <p className="max-w-2xl text-lg leading-8 text-ink-soft">
-                  这版前端只做 MVP 闭环：登录、导入仓库、配置语言与范围、触发全量或增量翻译、查看任务进度和 PR 去向。
-                  不加入图片翻译、BYOK、人工审校等后置功能。
-                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -116,13 +109,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <Badge variant="default">MVP 流程</Badge>
-                    <CardTitle className="mt-3 text-3xl">前端按文档收敛后的最小闭环</CardTitle>
+                    <CardTitle className="mt-3 text-3xl">工作流</CardTitle>
                   </div>
                   <Sparkles className="h-5 w-5 text-brand-700" />
                 </div>
-                <CardDescription>
-                  所有步骤都对应 `docs/MVP接口文档.md` 中已定义的页面与字段，不引入额外业务能力。
-                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {[
@@ -152,14 +142,14 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           {valueProps.map((item) => {
             const Icon = item.icon;
             return (
-              <Card key={item.title}>
-                <CardHeader>
-                  <div className="rounded-full bg-brand-50 p-3 text-brand-700 w-fit">
-                    <Icon className="h-5 w-5" />
-                  </div>
+                <Card key={item.title}>
+                  <CardHeader>
+                    <div className="rounded-full bg-brand-50 p-3 text-brand-700 w-fit">
+                      <Icon className="h-5 w-5" />
+                    </div>
                   <CardTitle className="mt-2">{item.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm leading-7 text-ink-soft">{item.description}</CardContent>
+                <CardContent className="text-sm leading-7 text-ink-soft" />
               </Card>
             );
           })}

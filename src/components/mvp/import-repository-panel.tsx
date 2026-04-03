@@ -6,7 +6,7 @@ import { ArrowUpRight, FolderGit2, LoaderCircle, ShieldCheck, Sparkles } from "l
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requestApi } from "@/lib/client-api";
 import type { ImportableRepository, InstallationSummary } from "@/modules/mvp/contracts";
 
@@ -95,37 +95,14 @@ export function ImportRepositoryPanel({
         <div className="flex items-center justify-between gap-3">
           <div>
             <Badge variant="default">导入仓库</Badge>
-            <CardTitle className="mt-3">按 GitHub App 安装范围选择仓库</CardTitle>
+            <CardTitle className="mt-3">选择 GitHub App 安装</CardTitle>
           </div>
           <div className="rounded-full bg-brand-50 p-3 text-brand-700">
             <FolderGit2 className="h-5 w-5" />
           </div>
         </div>
-        <CardDescription>
-          MVP 按安装范围拉取仓库列表。前端只消费平台聚合后的安装与仓库数据，不直连 GitHub API。
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid gap-3 md:grid-cols-3">
-          {[
-            { icon: ShieldCheck, title: "1. 选择安装", detail: "先选 GitHub App 的安装主体" },
-            { icon: FolderGit2, title: "2. 选择仓库", detail: "仅显示当前安装下可见仓库" },
-            { icon: Sparkles, title: "3. 导入并配置", detail: "进入配置页完成语言、范围与模型设置" },
-          ].map((step) => {
-            const Icon = step.icon;
-            return (
-              <div
-                key={step.title}
-                className="rounded-[24px] border border-brand-100 bg-brand-50/60 p-4"
-              >
-                <Icon className="mb-3 h-5 w-5 text-brand-700" />
-                <p className="font-medium text-ink">{step.title}</p>
-                <p className="mt-2 text-sm leading-6 text-ink-soft">{step.detail}</p>
-              </div>
-            );
-          })}
-        </div>
-
         <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
           <div className="space-y-3">
             {installations.length > 0 ? (
@@ -175,11 +152,8 @@ export function ImportRepositoryPanel({
               ))
             ) : (
               <div className="rounded-[24px] border border-dashed border-ink/12 bg-white/70 p-5 text-sm leading-7 text-ink-soft">
-                <p className="font-medium text-ink">还没有可用的 GitHub App 安装</p>
-                <p className="mt-2">
-                  {installationsError ??
-                    "完成 GitHub 登录并安装 GitHub App 后，这里才会出现可导入的安装主体。"}
-                </p>
+                <p className="font-medium text-ink">暂无可用安装</p>
+                {installationsError ? <p className="mt-2">{installationsError}</p> : null}
                 {installUrl ? (
                   <Button asChild className="mt-4" size="sm">
                     <a href={installUrl} rel="noreferrer" target="_blank">
@@ -200,8 +174,7 @@ export function ImportRepositoryPanel({
             ) : null}
             {repositories.length === 0 && installations.length > 0 && !loadError ? (
               <div className="rounded-[24px] border border-dashed border-ink/12 bg-white/70 p-5 text-sm leading-7 text-ink-soft">
-                <p className="font-medium text-ink">先选择一个安装主体</p>
-                <p className="mt-2">选择左侧安装后，这里会加载对应的公共仓库列表。</p>
+                <p className="font-medium text-ink">请选择安装</p>
               </div>
             ) : null}
             {repositories.map((repository) => (
@@ -212,9 +185,7 @@ export function ImportRepositoryPanel({
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-1">
                     <p className="font-medium text-ink">{repository.fullName}</p>
-                    <p className="text-sm text-ink-soft">
-                      默认分支 {repository.defaultBranch} · {repository.private ? "私有" : "公共"} 仓库
-                    </p>
+                    <p className="text-sm text-ink-soft">{repository.defaultBranch}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={repository.alreadyImported ? "outline" : "success"}>
