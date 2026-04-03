@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-import { deriveTaskResult } from "./task-result";
+import { deriveTaskResult } from "./task-result.ts";
 
 const failedResult = deriveTaskResult({
   progressDone: 0,

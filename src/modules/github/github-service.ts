@@ -30,6 +30,26 @@ type RepositoryTreeItem = {
 
 let appInstance: App | null = null;
 
+function mapGitHubRequestError(error: unknown, fallbackMessage: string) {
+  const status = typeof error === "object" && error !== null && "status" in error
+    ? Number((error as { status?: number }).status)
+    : null;
+
+  if (status === 404) {
+    return new AppError("GITHUB_RESOURCE_NOT_FOUND", 404, "GitHub 仓库、分支或安装权限不存在");
+  }
+
+  if (status === 403) {
+    return new AppError("GITHUB_FORBIDDEN", 403, "GitHub 拒绝了当前仓库读取请求，请检查 App 安装范围和仓库权限");
+  }
+
+  if (status === 401) {
+    return new AppError("GITHUB_UNAUTHORIZED", 401, "GitHub 授权已失效，请重新登录并重新安装 GitHub App");
+  }
+
+  return new AppError("GITHUB_REQUEST_FAILED", 502, fallbackMessage);
+}
+
 function requireGitHubConfig() {
   if (!hasGitHubAppConfig()) {
     throw new AppError("GITHUB_NOT_CONFIGURED", 503, "GitHub App 尚未配置");
@@ -199,35 +219,39 @@ export async function listInstallationRepositories(options: {
   pageSize: number;
   query?: string;
 }) {
-  const octokit = await getInstallationOctokit(options.installationId);
-  const { data } = await octokit.rest.apps.listReposAccessibleToInstallation({
-    per_page: Math.min(options.pageSize, 100),
-    page: options.page,
-  });
+  try {
+    const octokit = await getInstallationOctokit(options.installationId);
+    const { data } = await octokit.rest.apps.listReposAccessibleToInstallation({
+      per_page: Math.min(options.pageSize, 100),
+      page: options.page,
+    });
 
-  const query = options.query?.trim().toLowerCase();
+    const query = options.query?.trim().toLowerCase();
 
-  const items = data.repositories
-    .filter((repository) => {
-      if (!query) {
-        return true;
-      }
+    const items = data.repositories
+      .filter((repository) => {
+        if (!query) {
+          return true;
+        }
 
-      return repository.full_name.toLowerCase().includes(query);
-    })
-    .map((repository) => ({
-      githubRepoId: String(repository.id),
-      owner: repository.owner.login,
-      name: repository.name,
-      fullName: repository.full_name,
-      defaultBranch: repository.default_branch,
-      private: repository.private,
-    }));
+        return repository.full_name.toLowerCase().includes(query);
+      })
+      .map((repository) => ({
+        githubRepoId: String(repository.id),
+        owner: repository.owner.login,
+        name: repository.name,
+        fullName: repository.full_name,
+        defaultBranch: repository.default_branch,
+        private: repository.private,
+      }));
 
-  return {
-    items,
-    total: data.total_count,
-  };
+    return {
+      items,
+      total: data.total_count,
+    };
+  } catch (error) {
+    throw mapGitHubRequestError(error, "读取 GitHub 安装下的仓库列表失败");
+  }
 }
 
 export async function getRepositoryByFullName(options: {
@@ -235,20 +259,24 @@ export async function getRepositoryByFullName(options: {
   owner: string;
   repo: string;
 }) {
-  const octokit = await getInstallationOctokit(options.installationId);
-  const { data } = await octokit.rest.repos.get({
-    owner: options.owner,
-    repo: options.repo,
-  });
+  try {
+    const octokit = await getInstallationOctokit(options.installationId);
+    const { data } = await octokit.rest.repos.get({
+      owner: options.owner,
+      repo: options.repo,
+    });
 
-  return {
-    githubRepoId: String(data.id),
-    owner: data.owner.login,
-    name: data.name,
-    fullName: data.full_name,
-    defaultBranch: data.default_branch,
-    private: data.private,
-  };
+    return {
+      githubRepoId: String(data.id),
+      owner: data.owner.login,
+      name: data.name,
+      fullName: data.full_name,
+      defaultBranch: data.default_branch,
+      private: data.private,
+    };
+  } catch (error) {
+    throw mapGitHubRequestError(error, "读取 GitHub 仓库信息失败");
+  }
 }
 
 export async function getBranchHead(options: {
@@ -257,17 +285,21 @@ export async function getBranchHead(options: {
   repo: string;
   branch: string;
 }) {
-  const octokit = await getInstallationOctokit(options.installationId);
-  const { data } = await octokit.rest.repos.getBranch({
-    owner: options.owner,
-    repo: options.repo,
-    branch: options.branch,
-  });
+  try {
+    const octokit = await getInstallationOctokit(options.installationId);
+    const { data } = await octokit.rest.repos.getBranch({
+      owner: options.owner,
+      repo: options.repo,
+      branch: options.branch,
+    });
 
-  return {
-    sha: data.commit.sha,
-    treeSha: data.commit.commit.tree.sha,
-  };
+    return {
+      sha: data.commit.sha,
+      treeSha: data.commit.commit.tree.sha,
+    };
+  } catch (error) {
+    throw mapGitHubRequestError(error, "读取 GitHub 分支信息失败");
+  }
 }
 
 async function walkRepositoryContents(options: {
@@ -315,34 +347,38 @@ export async function getRepositoryTree(options: {
   repo: string;
   ref: string;
 }) {
-  const octokit = await getInstallationOctokit(options.installationId);
-  const branch = await getBranchHead({
-    installationId: options.installationId,
-    owner: options.owner,
-    repo: options.repo,
-    branch: options.ref,
-  });
-  const tree = await octokit.rest.git.getTree({
-    owner: options.owner,
-    repo: options.repo,
-    tree_sha: branch.treeSha,
-    recursive: "true",
-  });
+  try {
+    const octokit = await getInstallationOctokit(options.installationId);
+    const branch = await getBranchHead({
+      installationId: options.installationId,
+      owner: options.owner,
+      repo: options.repo,
+      branch: options.ref,
+    });
+    const tree = await octokit.rest.git.getTree({
+      owner: options.owner,
+      repo: options.repo,
+      tree_sha: branch.treeSha,
+      recursive: "true",
+    });
 
-  if (tree.data.truncated) {
-    logger.warn(
-      { repo: `${options.owner}/${options.repo}`, ref: options.ref },
-      "Git tree response truncated, falling back to contents walk",
-    );
-    return walkRepositoryContents(options);
+    if (tree.data.truncated) {
+      logger.warn(
+        { repo: `${options.owner}/${options.repo}`, ref: options.ref },
+        "Git tree response truncated, falling back to contents walk",
+      );
+      return walkRepositoryContents(options);
+    }
+
+    return tree.data.tree
+      .filter((item) => Boolean(item.path))
+      .map((item) => ({
+        path: normalizePath(item.path!),
+        type: item.type === "tree" ? "dir" : "file",
+      })) as RepositoryTreeItem[];
+  } catch (error) {
+    throw mapGitHubRequestError(error, "读取 GitHub 文件树失败");
   }
-
-  return tree.data.tree
-    .filter((item) => Boolean(item.path))
-    .map((item) => ({
-      path: normalizePath(item.path!),
-      type: item.type === "tree" ? "dir" : "file",
-    })) as RepositoryTreeItem[];
 }
 
 export async function getFileContent(options: {

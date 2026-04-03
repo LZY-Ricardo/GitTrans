@@ -4,12 +4,10 @@ import { ArrowRight, FolderGit2, GitPullRequestArrow, Languages, Rocket } from "
 import { AppShell } from "@/components/layout/app-shell";
 import { ImportRepositoryPanel } from "@/components/mvp/import-repository-panel";
 import { MetricCard } from "@/components/mvp/metric-card";
-import { RepoStatusBadge } from "@/components/mvp/status-badge";
+import { RepositoryList } from "@/components/mvp/repository-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDateTime } from "@/lib/format";
-import { getLanguageLabel } from "@/modules/mvp/labels";
 import { getDashboardPageData } from "@/modules/mvp/page-data";
 
 export default async function DashboardPage() {
@@ -71,59 +69,8 @@ export default async function DashboardPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {repos.length > 0 ? (
-              repos.map((repo) => (
-                <div
-                  key={repo.id}
-                  className="rounded-[28px] border border-ink/8 bg-white/80 p-5 transition-colors hover:border-brand-200"
-                >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <RepoStatusBadge status={repo.status} />
-                        <Badge variant="outline">{repo.baseBranch}</Badge>
-                        <Badge variant="muted">{repo.baseLanguage}</Badge>
-                      </div>
-                      <div>
-                        <h2 className="font-serif text-2xl text-ink">{repo.fullName}</h2>
-                        <p className="text-sm leading-7 text-ink-soft">{formatDateTime(repo.lastSyncedAt)}</p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {repo.targetLanguages.map((language) => (
-                          <Badge key={language} variant="outline">
-                            {getLanguageLabel(language)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      <Button asChild variant="outline">
-                        <Link href={`/repo/${repo.id}`}>仓库详情</Link>
-                      </Button>
-                      <Button asChild variant="secondary">
-                        <Link href={`/repo/${repo.id}/config`}>配置</Link>
-                      </Button>
-                      {repo.currentTask ? (
-                        <Button asChild>
-                          <Link href={`/task/${repo.currentTask.id}`}>任务详情</Link>
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                  {repo.currentPrUrl ? (
-                    <div className="mt-4 rounded-[22px] border border-brand-100 bg-brand-50/70 px-4 py-3 text-sm text-brand-800">
-                      <a className="underline" href={repo.currentPrUrl} rel="noreferrer" target="_blank">查看 PR</a>
-                    </div>
-                  ) : null}
-                </div>
-              ))
-            ) : (
-              <div className="rounded-[28px] border border-dashed border-ink/12 bg-white/80 p-6 text-sm leading-7 text-ink-soft">
-                <p className="font-medium text-ink">还没有导入任何仓库</p>
-              </div>
-            )}
+          <CardContent>
+            <RepositoryList repos={repos} />
           </CardContent>
         </Card>
 

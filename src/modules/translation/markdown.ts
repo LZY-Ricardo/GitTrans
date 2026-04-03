@@ -43,13 +43,11 @@ function splitMarkdownIntoSegments(markdown: string): Segment[] {
 }
 
 function splitTextSegment(text: string) {
-  const normalized = text.trim();
-
-  if (!normalized) {
+  if (!text.trim()) {
     return [text];
   }
 
-  const blocks = normalized.split(/\n(?=# )/g);
+  const blocks = text.split(/\n(?=# )/g);
   const chunks: string[] = [];
   let buffer = "";
 

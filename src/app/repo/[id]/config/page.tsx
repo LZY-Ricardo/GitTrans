@@ -15,11 +15,12 @@ export default async function RepoConfigPage({ params }: RepoConfigPageProps) {
   let repo;
   let config;
   let files;
+  let filesNotice;
   let filesError;
   let bootstrap;
 
   try {
-    ({ repo, config, files, filesError, bootstrap } = await getRepoConfigPageData(id));
+    ({ repo, config, files, filesNotice, filesError, bootstrap } = await getRepoConfigPageData(id));
   } catch (error) {
     if (isNotFoundError(error)) {
       notFound();
@@ -46,7 +47,13 @@ export default async function RepoConfigPage({ params }: RepoConfigPageProps) {
       eyebrow="Configuration Workspace"
       title={`${repo.fullName} · 翻译配置`}
     >
-      <ConfigEditor bootstrap={bootstrap} config={config} files={files} filesError={filesError} />
+      <ConfigEditor
+        bootstrap={bootstrap}
+        config={config}
+        files={files}
+        filesError={filesError}
+        filesNotice={filesNotice}
+      />
     </AppShell>
   );
 }

@@ -37,6 +37,125 @@ function getDefaultConfig(defaultBranch: string) {
   };
 }
 
+function isRecoverableGitHubAccessError(error: unknown) {
+  return error instanceof AppError && [
+    "GITHUB_RESOURCE_NOT_FOUND",
+    "GITHUB_FORBIDDEN",
+    "GITHUB_UNAUTHORIZED",
+  ].includes(error.code);
+}
+
+export function shouldRetryRepositoryFilesWithDefaultBranch(options: {
+  error: unknown;
+  requestedRef: string;
+  defaultBranch: string;
+}) {
+  return (
+    options.error instanceof AppError &&
+    options.error.code === "GITHUB_RESOURCE_NOT_FOUND" &&
+    options.requestedRef !== options.defaultBranch
+  );
+}
+
+async function upsertInstallationRecord(installation: {
+  installationId: string;
+  accountLogin: string;
+  accountType: string;
+  repositoriesCount: number | null;
+}) {
+  return prisma.gitHubAppInstallation.upsert({
+    where: {
+      installationId: installation.installationId,
+    },
+    create: {
+      installationId: installation.installationId,
+      accountLogin: installation.accountLogin,
+      accountType: installation.accountType,
+      repositoriesCount: installation.repositoriesCount,
+    },
+    update: {
+      accountLogin: installation.accountLogin,
+      accountType: installation.accountType,
+      repositoriesCount: installation.repositoriesCount,
+    },
+  });
+}
+
+async function ensureRepositoryGitHubAccessForRecord(repo: Awaited<ReturnType<typeof getRepositoryForUser>>) {
+  try {
+    const repoMeta = await getRepositoryByFullName({
+      installationId: repo.installation.installationId,
+      owner: repo.owner,
+      repo: repo.name,
+    });
+
+    if (repo.defaultBranch !== repoMeta.defaultBranch) {
+      await prisma.repository.update({
+        where: { id: repo.id },
+        data: {
+          defaultBranch: repoMeta.defaultBranch,
+        },
+      });
+    }
+
+    return {
+      installationId: repo.installation.installationId,
+      defaultBranch: repoMeta.defaultBranch,
+      notice: null as string | null,
+    };
+  } catch (error) {
+    if (!isRecoverableGitHubAccessError(error)) {
+      throw error;
+    }
+  }
+
+  const installations = await listAccessibleInstallationsForUser(repo.userId);
+
+  for (const installation of installations) {
+    if (installation.installationId === repo.installation.installationId) {
+      continue;
+    }
+
+    try {
+      const repoMeta = await getRepositoryByFullName({
+        installationId: installation.installationId,
+        owner: repo.owner,
+        repo: repo.name,
+      });
+      const installationRecord = await upsertInstallationRecord(installation);
+
+      await prisma.repository.update({
+        where: { id: repo.id },
+        data: {
+          installationRefId: installationRecord.id,
+          defaultBranch: repoMeta.defaultBranch,
+        },
+      });
+
+      return {
+        installationId: installation.installationId,
+        defaultBranch: repoMeta.defaultBranch,
+        notice: "已自动恢复 GitHub 安装绑定，请确认当前基准分支后再保存配置。",
+      };
+    } catch (error) {
+      if (!isRecoverableGitHubAccessError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw new AppError(
+    "REPOSITORY_ACCESS_LOST",
+    409,
+    "当前 GitHub 安装已无法访问该仓库，请检查 GitHub App 安装范围后重新导入仓库。",
+  );
+}
+
+export async function ensureRepositoryGitHubAccess(repoId: string, userId: string) {
+  const repo = await getRepositoryForUser(repoId, userId);
+  return ensureRepositoryGitHubAccessForRecord(repo);
+}
+
 export async function listAccessibleInstallationsForUser(userId: string) {
   const userToken = await getUserGitHubAccessToken(userId);
   return listUserInstallations(userToken);
@@ -109,24 +228,23 @@ export async function importRepositoryForUser(options: {
     throw new AppError("PRIVATE_REPO_NOT_SUPPORTED", 400, "MVP 暂不支持私有仓库");
   }
 
-  const installationRecord = await prisma.gitHubAppInstallation.upsert({
+  const installationRecord = await upsertInstallationRecord(installation);
+
+  const defaults = getDefaultConfig(repoMeta.defaultBranch);
+
+  const existingRepository = await prisma.repository.findUnique({
     where: {
-      installationId: options.installationId
-    },
-    create: {
-      installationId: options.installationId,
-      accountLogin: installation.accountLogin,
-      accountType: installation.accountType,
-      repositoriesCount: installation.repositoriesCount
-    },
-    update: {
-      accountLogin: installation.accountLogin,
-      accountType: installation.accountType,
-      repositoriesCount: installation.repositoriesCount
+      fullName: repoMeta.fullName
     }
   });
 
-  const defaults = getDefaultConfig(repoMeta.defaultBranch);
+  if (existingRepository && existingRepository.userId !== options.userId) {
+    throw new AppError(
+      "REPOSITORY_ALREADY_IMPORTED",
+      409,
+      "该仓库已被其他账号导入，当前 MVP 暂不支持多账号共享同一仓库",
+    );
+  }
 
   return prisma.repository.upsert({
     where: {
@@ -335,12 +453,37 @@ export async function getRepositoryFiles(repoId: string, userId: string, ref?: s
     throw new AppError("REPO_CONFIG_NOT_FOUND", 404, "仓库配置不存在");
   }
 
-  const tree = await getRepositoryTree({
-    installationId: repo.installation.installationId,
-    owner: repo.owner,
-    repo: repo.name,
-    ref: ref ?? repo.baseBranch
-  });
+  const access = await ensureRepositoryGitHubAccessForRecord(repo);
+  const requestedRef = ref ?? repo.baseBranch;
+  let notice = access.notice;
+  let tree;
+
+  try {
+    tree = await getRepositoryTree({
+      installationId: access.installationId,
+      owner: repo.owner,
+      repo: repo.name,
+      ref: requestedRef
+    });
+  } catch (error) {
+    if (shouldRetryRepositoryFilesWithDefaultBranch({
+      error,
+      requestedRef,
+      defaultBranch: access.defaultBranch,
+    })) {
+      tree = await getRepositoryTree({
+        installationId: access.installationId,
+        owner: repo.owner,
+        repo: repo.name,
+        ref: access.defaultBranch
+      });
+      notice = [notice, `基准分支 ${requestedRef} 不可用，当前已改用默认分支 ${access.defaultBranch} 预览文件。`]
+        .filter(Boolean)
+        .join(" ");
+    } else {
+      throw error;
+    }
+  }
 
   const includePatterns = config.includePathsJson as string[];
   const ignoreMatcher = createIgnoreMatcher(config.ignoreRulesText);
@@ -348,10 +491,10 @@ export async function getRepositoryFiles(repoId: string, userId: string, ref?: s
   const files = tree.filter((item) => item.type === "file");
   const items = files.map((item) => {
     const normalized = normalizePath(item.path);
-    const selected = matchesAnyGlob(normalized, includePatterns);
-    const ignored = ignoreMatcher.ignores(normalized);
     const translatable =
       normalized.toLowerCase().endsWith(".md") && !normalized.startsWith("translations/");
+    const selected = translatable && matchesAnyGlob(normalized, includePatterns);
+    const ignored = translatable && ignoreMatcher.ignores(normalized);
 
     return {
       path: normalized,
@@ -361,7 +504,7 @@ export async function getRepositoryFiles(repoId: string, userId: string, ref?: s
       ignored,
       reason: ignored ? "matched_ignore_rule" : null
     };
-  });
+  }).filter((item) => item.translatable);
 
   return {
     summary: {
@@ -369,6 +512,7 @@ export async function getRepositoryFiles(repoId: string, userId: string, ref?: s
       translatableFiles: items.filter((item) => item.translatable).length,
       ignoredFiles: items.filter((item) => item.ignored).length
     },
-    items
+    items,
+    notice,
   };
 }

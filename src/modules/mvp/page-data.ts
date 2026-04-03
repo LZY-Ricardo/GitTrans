@@ -185,24 +185,24 @@ export async function getRepoConfigPageData(repoId: string) {
 
   let files: FileTreeItem[] = [];
   let filesError: string | null = null;
+  let filesNotice: string | null = null;
 
   try {
-    files = (await getRepositoryFiles(repoId, user.id, repo.baseBranch)).items.map((item) => ({
+    const fileResult = await getRepositoryFiles(repoId, user.id, repo.baseBranch);
+    filesNotice = fileResult.notice;
+    files = fileResult.items.map((item) => ({
       ...item,
       reason: item.reason ?? undefined,
     }));
   } catch (error) {
-    filesError =
-      error instanceof Error &&
-      error.message.includes("installationId option is required")
-        ? "当前仓库尚未完成有效的 GitHub 安装授权，暂时无法读取实时文件树。"
-        : "当前仓库暂时无法读取 GitHub 文件树，请确认 GitHub App 安装与仓库权限后重试。";
+    filesError = error instanceof Error ? error.message : "当前仓库暂时无法读取 GitHub 文件树";
   }
 
   return {
     repo: mapRepoDetail(repo),
     config,
     files,
+    filesNotice,
     filesError,
     bootstrap: getBootstrapPayload(),
   };

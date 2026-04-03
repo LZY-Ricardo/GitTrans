@@ -1,4 +1,5 @@
-import { ArrowUpRight, KeyRound, ShieldCheck, UserCircle2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, KeyRound, ShieldCheck } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { getSettingsPageData } from "@/modules/mvp/page-data";
 
 export default async function SettingsPage() {
   const { session, bootstrap } = await getSettingsPageData();
+  const topModels = bootstrap.models.slice(0, 4);
 
   return (
     <AppShell
@@ -42,7 +44,7 @@ export default async function SettingsPage() {
                 <div>
                   <CardTitle className="text-3xl">{session?.user.name ?? "访客"}</CardTitle>
                   <p className="mt-2 text-sm text-ink-soft">
-                    {session ? "GitHub 账户已连接" : "请先完成 GitHub 登录"}
+                    {session ? `@${session.user.githubLogin}` : "GitHub"}
                   </p>
                 </div>
               </div>
@@ -82,6 +84,22 @@ export default async function SettingsPage() {
                 <p className="mt-2 font-medium text-ink">平台托管</p>
               </div>
             </div>
+
+            <div className="flex flex-wrap gap-3">
+              {session ? null : (
+                <Button asChild>
+                  <Link href="/api/auth/github/start">使用 GitHub 登录</Link>
+                </Button>
+              )}
+              {session?.githubApp.installUrl ? (
+                <Button asChild variant="secondary">
+                  <a href={session.githubApp.installUrl} rel="noreferrer" target="_blank">
+                    GitHub App
+                    <ArrowUpRight className="h-4 w-4" />
+                  </a>
+                </Button>
+              ) : null}
+            </div>
           </CardContent>
         </Card>
 
@@ -112,9 +130,13 @@ export default async function SettingsPage() {
               {session?.githubApp.installUrl ? (
                 <Button asChild className="w-full" variant="secondary">
                   <a href={session.githubApp.installUrl} rel="noreferrer" target="_blank">
-                    查看安装
+                    打开安装页
                     <ArrowUpRight className="h-4 w-4" />
                   </a>
+                </Button>
+              ) : !session ? (
+                <Button asChild className="w-full">
+                  <Link href="/api/auth/github/start">先登录</Link>
                 </Button>
               ) : null}
             </CardContent>
@@ -146,6 +168,13 @@ export default async function SettingsPage() {
                   <span>密钥输入</span>
                   <span className="font-medium text-ink">关闭</span>
                 </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {topModels.map((model) => (
+                  <Badge key={model.id} variant={model.recommended ? "success" : "outline"}>
+                    {model.name}
+                  </Badge>
+                ))}
               </div>
             </CardContent>
           </Card>

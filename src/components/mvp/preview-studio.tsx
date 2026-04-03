@@ -36,7 +36,7 @@ export function PreviewStudio({ previews, prUrl }: PreviewStudioProps) {
           <div className="space-y-3">
             <Badge variant="default">结果预览</Badge>
             <div className="flex items-center gap-3">
-              <CardTitle className="text-2xl md:text-3xl">全宽原文 / 译文对照</CardTitle>
+              <CardTitle className="text-2xl md:text-3xl">原文与译文对照</CardTitle>
               <Languages className="h-5 w-5 text-brand-700" />
             </div>
           </div>
@@ -52,7 +52,7 @@ export function PreviewStudio({ previews, prUrl }: PreviewStudioProps) {
       </CardHeader>
 
       <CardContent className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
-        <div className="space-y-3">
+        <div className="max-h-[860px] space-y-3 overflow-y-auto pr-1">
           {previews.map((preview, index) => (
             <button
               key={`${preview.sourcePath}-${preview.targetLanguage}`}
@@ -76,38 +76,42 @@ export function PreviewStudio({ previews, prUrl }: PreviewStudioProps) {
           ))}
         </div>
 
-        <div className="grid min-w-0 gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{getLanguageLabel(activePreview.targetLanguage)}</Badge>
-            <Badge variant="muted">{activePreview.sourcePath}</Badge>
-            <Badge variant="muted">{activePreview.targetPath}</Badge>
-          </div>
-
-          <div className="grid gap-4 xl:grid-cols-2">
-            <section className="rounded-[28px] border border-ink/8 bg-paper p-5">
-              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-ink">
+        <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+          <section className="rounded-[28px] border border-ink/8 bg-paper p-5">
+            <div className="mb-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-ink">
                 <BookOpenText className="h-4 w-4 text-brand-700" />
                 原文
               </div>
-              <div className="min-h-[560px] max-h-[760px] overflow-auto rounded-[20px] border border-ink/8 bg-white/70 p-5">
-                <pre className="whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">
-                  {activePreview.sourceContent}
-                </pre>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{getLanguageLabel(activePreview.targetLanguage)}</Badge>
+                <Badge variant="muted">{activePreview.sourcePath}</Badge>
               </div>
-            </section>
+            </div>
+            <div className="min-h-[560px] max-h-[760px] overflow-auto rounded-[20px] border border-ink/8 bg-white/70 p-5">
+              <pre className="whitespace-pre-wrap break-words text-sm leading-7 text-ink-soft">
+                {activePreview.sourceContent}
+              </pre>
+            </div>
+          </section>
 
-            <section className="rounded-[28px] border border-brand-100 bg-brand-50/60 p-5">
-              <div className="mb-4 flex items-center gap-2 text-sm font-medium text-brand-800">
+          <section className="rounded-[28px] border border-brand-100 bg-brand-50/60 p-5">
+            <div className="mb-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-brand-800">
                 <FileText className="h-4 w-4" />
                 译文
               </div>
-              <div className="min-h-[560px] max-h-[760px] overflow-auto rounded-[20px] border border-brand-100 bg-white/80 p-5">
-                <pre className="whitespace-pre-wrap break-words text-sm leading-7 text-brand-900/90">
-                  {activePreview.translatedContent}
-                </pre>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{getLanguageLabel(activePreview.targetLanguage)}</Badge>
+                <Badge variant="muted">{activePreview.targetPath}</Badge>
               </div>
-            </section>
-          </div>
+            </div>
+            <div className="min-h-[560px] max-h-[760px] overflow-auto rounded-[20px] border border-brand-100 bg-white/80 p-5">
+              <pre className="whitespace-pre-wrap break-words text-sm leading-7 text-brand-900/90">
+                {activePreview.translatedContent}
+              </pre>
+            </div>
+          </section>
         </div>
       </CardContent>
     </Card>

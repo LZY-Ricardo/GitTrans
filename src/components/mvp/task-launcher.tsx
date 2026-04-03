@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { LoaderCircle, Play, RefreshCcw } from "lucide-react";
 
@@ -17,27 +17,23 @@ export function TaskLauncher({ repoId, canRunIncremental }: TaskLauncherProps) {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
   const [pendingType, setPendingType] = useState<TaskType | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const isPending = pendingType !== null;
 
-  function launchTask(type: TaskType) {
+  async function launchTask(type: TaskType) {
     setPendingType(type);
     setMessage(null);
 
-    startTransition(async () => {
-      try {
-        const data = await requestApi<{ taskId: string; status: string }>(`/api/repos/${repoId}/tasks`, {
-          method: "POST",
-          body: JSON.stringify({ type }),
-        });
+    try {
+      const data = await requestApi<{ taskId: string; status: string }>(`/api/repos/${repoId}/tasks`, {
+        method: "POST",
+        body: JSON.stringify({ type }),
+      });
 
-        router.push(`/task/${data.taskId}`);
-        router.refresh();
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : "创建任务失败");
-      } finally {
-        setPendingType(null);
-      }
-    });
+      router.push(`/task/${data.taskId}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "创建任务失败");
+      setPendingType(null);
+    }
   }
 
   return (
@@ -64,7 +60,11 @@ export function TaskLauncher({ repoId, canRunIncremental }: TaskLauncherProps) {
           )}
         </Button>
       </div>
-      {message ? <p className="text-sm leading-6 text-ink-soft">{message}</p> : null}
+      {message ? (
+        <div className="rounded-[20px] border border-rose-100 bg-rose-50/70 px-4 py-3 text-sm leading-6 text-rose-700">
+          {message}
+        </div>
+      ) : null}
     </div>
   );
 }

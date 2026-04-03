@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, FolderGit2, LoaderCircle, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowUpRight, FolderGit2, LoaderCircle, Search, ShieldCheck, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { requestApi } from "@/lib/client-api";
 import type { ImportableRepository, InstallationSummary } from "@/modules/mvp/contracts";
 
@@ -28,7 +29,12 @@ export function ImportRepositoryPanel({
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [loadingInstallationId, setLoadingInstallationId] = useState<string | null>(null);
   const [importingRepoId, setImportingRepoId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [isPending, startTransition] = useTransition();
+
+  const filteredRepositories = repositories.filter((repository) =>
+    repository.fullName.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+  );
 
   function loadRepositories(installationId: string) {
     setSelectedInstallationId(installationId);
@@ -103,7 +109,7 @@ export function ImportRepositoryPanel({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+        <div className="space-y-4">
           <div className="space-y-3">
             {installations.length > 0 ? (
               installations.map((installation) => (
@@ -115,9 +121,9 @@ export function ImportRepositoryPanel({
                       : "border-ink/8 bg-white/80 hover:border-brand-200"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-3">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="font-medium text-ink">{installation.accountLogin}</p>
+                      <p className="break-words text-xl font-medium text-ink">{installation.accountLogin}</p>
                       <p className="text-sm text-ink-soft">
                         {installation.accountType} ·{" "}
                         {installation.repositoriesCount === null
@@ -125,10 +131,8 @@ export function ImportRepositoryPanel({
                           : `${installation.repositoriesCount} 个仓库`}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {loadingInstallationId === installation.installationId ? (
-                        <LoaderCircle className="h-4 w-4 animate-spin text-brand-700" />
-                      ) : null}
+
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
                         onClick={() => loadRepositories(installation.installationId)}
                         size="sm"
@@ -138,7 +142,10 @@ export function ImportRepositoryPanel({
                             : "secondary"
                         }
                       >
-                        选择安装
+                        {loadingInstallationId === installation.installationId ? "读取中..." : "选择安装"}
+                        {loadingInstallationId === installation.installationId ? (
+                          <LoaderCircle className="h-4 w-4 animate-spin text-current" />
+                        ) : null}
                       </Button>
                       <Button asChild size="sm" variant="ghost">
                         <a href={installation.installUrl} rel="noreferrer" target="_blank">
@@ -166,52 +173,70 @@ export function ImportRepositoryPanel({
             )}
           </div>
 
-          <div className="space-y-3">
-            {installations.length > 0 && loadError ? (
-              <div className="rounded-[24px] border border-rose-100 bg-rose-50/70 p-5 text-sm leading-7 text-rose-700">
-                {loadError}
-              </div>
-            ) : null}
-            {repositories.length === 0 && installations.length > 0 && !loadError ? (
-              <div className="rounded-[24px] border border-dashed border-ink/12 bg-white/70 p-5 text-sm leading-7 text-ink-soft">
-                <p className="font-medium text-ink">请选择安装</p>
-              </div>
-            ) : null}
-            {repositories.map((repository) => (
-              <div
-                key={repository.githubRepoId}
-                className="rounded-[24px] border border-ink/8 bg-white/80 p-4"
-              >
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div className="space-y-1">
-                    <p className="font-medium text-ink">{repository.fullName}</p>
-                    <p className="text-sm text-ink-soft">{repository.defaultBranch}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={repository.alreadyImported ? "outline" : "success"}>
-                      {repository.alreadyImported ? "已导入" : "可导入"}
-                    </Badge>
-                    <Button
-                      disabled={isPending || repository.alreadyImported}
-                      onClick={() => importRepository(repository)}
-                      size="sm"
-                      variant={repository.alreadyImported ? "secondary" : "default"}
-                    >
-                      {importingRepoId === repository.githubRepoId ? "导入中..." : "导入"}
-                      {importingRepoId === repository.githubRepoId ? (
-                        <LoaderCircle className="h-4 w-4 animate-spin" />
-                      ) : null}
-                    </Button>
+          {installations.length > 0 && loadError ? (
+            <div className="rounded-[24px] border border-rose-100 bg-rose-50/70 p-5 text-sm leading-7 text-rose-700">
+              {loadError}
+            </div>
+          ) : null}
+          {repositories.length > 0 ? (
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-soft" />
+              <Input
+                className="pl-10"
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="搜索仓库"
+                value={searchQuery}
+              />
+            </div>
+          ) : null}
+          {repositories.length === 0 && installations.length > 0 && !loadError ? (
+            <div className="rounded-[24px] border border-dashed border-ink/12 bg-white/70 p-5 text-sm leading-7 text-ink-soft">
+              <p className="font-medium text-ink">请选择安装</p>
+            </div>
+          ) : null}
+          {repositories.length > 0 ? (
+            <div className="max-h-[540px] space-y-3 overflow-y-auto pr-1">
+              {filteredRepositories.map((repository) => (
+                <div
+                  key={repository.githubRepoId}
+                  className="rounded-[24px] border border-ink/8 bg-white/80 p-4"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div className="space-y-1">
+                      <p className="break-all font-medium text-ink">{repository.fullName}</p>
+                      <p className="text-sm text-ink-soft">{repository.defaultBranch}</p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <Badge variant={repository.alreadyImported ? "outline" : "success"}>
+                        {repository.alreadyImported ? "已导入" : "可导入"}
+                      </Badge>
+                      <Button
+                        disabled={isPending || repository.alreadyImported}
+                        onClick={() => importRepository(repository)}
+                        size="sm"
+                        variant={repository.alreadyImported ? "secondary" : "default"}
+                      >
+                        {importingRepoId === repository.githubRepoId ? "导入中..." : "导入"}
+                        {importingRepoId === repository.githubRepoId ? (
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                        ) : null}
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-            {actionMessage ? (
-              <div className="rounded-[24px] border border-amber-100 bg-amber-50/70 p-4 text-sm leading-7 text-amber-700">
-                {actionMessage}
-              </div>
-            ) : null}
-          </div>
+              ))}
+              {filteredRepositories.length === 0 ? (
+                <div className="rounded-[24px] border border-dashed border-ink/12 bg-white/70 p-5 text-sm leading-7 text-ink-soft">
+                  没有匹配的仓库
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          {actionMessage ? (
+            <div className="rounded-[24px] border border-amber-100 bg-amber-50/70 p-4 text-sm leading-7 text-amber-700">
+              {actionMessage}
+            </div>
+          ) : null}
         </div>
       </CardContent>
     </Card>

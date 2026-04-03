@@ -14,8 +14,14 @@ import {
   upsertPullRequest
 } from "@/modules/github/github-service";
 import { buildGitTransConfigFile } from "@/modules/repos/config-file";
+import { ensureRepositoryGitHubAccess } from "@/modules/repos/repo-service";
+import {
+  buildTranslatedOutputPath,
+  resolveEnglishFileStem
+} from "@/modules/translation/file-paths";
 import { translateMarkdown } from "@/modules/translation/markdown";
 import { updateReadmeNavigation } from "@/modules/translation/readme-navigation";
+import { collectPublishedReadmeLanguages } from "@/modules/worker/published-languages";
 import { deriveTaskResult } from "@/modules/worker/task-result";
 
 type RunnableTask = Awaited<ReturnType<typeof claimNextTask>>;
@@ -89,10 +95,6 @@ async function claimNextTask(workerId: string) {
   });
 }
 
-function buildOutputPath(language: string, filePath: string) {
-  return `translations/${language}/${normalizePath(filePath)}`;
-}
-
 async function updateTaskProgress(
   taskId: string,
   data: Partial<{
@@ -153,8 +155,9 @@ async function resolveSourceFiles(task: NonNullable<RunnableTask>) {
   }
 
   const includePatterns = config.includePathsJson as string[];
+  const access = await ensureRepositoryGitHubAccess(repo.id, repo.userId);
   const branchHead = await getBranchHead({
-    installationId: repo.installation.installationId,
+    installationId: access.installationId,
     owner: repo.owner,
     repo: repo.name,
     branch: repo.baseBranch
@@ -162,7 +165,7 @@ async function resolveSourceFiles(task: NonNullable<RunnableTask>) {
 
   if (task.type === TaskType.full || !repo.syncState?.lastSyncedSha) {
     const tree = await getRepositoryTree({
-      installationId: repo.installation.installationId,
+      installationId: access.installationId,
       owner: repo.owner,
       repo: repo.name,
       ref: repo.baseBranch
@@ -183,7 +186,7 @@ async function resolveSourceFiles(task: NonNullable<RunnableTask>) {
   }
 
   const compare = await compareCommits({
-    installationId: repo.installation.installationId,
+    installationId: access.installationId,
     owner: repo.owner,
     repo: repo.name,
     base: repo.syncState.lastSyncedSha!,
@@ -212,18 +215,23 @@ async function resolveSourceFiles(task: NonNullable<RunnableTask>) {
   };
 }
 
-async function createTaskItems(taskId: string, files: string[], languages: string[]) {
-  if (!files.length || !languages.length) {
+async function createTaskItems(options: {
+  taskId: string;
+  files: string[];
+  languages: string[];
+  outputPathMap: Map<string, string>;
+}) {
+  if (!options.files.length || !options.languages.length) {
     return;
   }
 
   await prisma.translationTaskItem.createMany({
-    data: files.flatMap((filePath) =>
-      languages.map((language) => ({
-        taskId,
+    data: options.files.flatMap((filePath) =>
+      options.languages.map((language) => ({
+        taskId: options.taskId,
         filePath,
         language,
-        outputPath: buildOutputPath(language, filePath)
+        outputPath: options.outputPathMap.get(`${language}:${filePath}`),
       }))
     )
   });
@@ -237,16 +245,58 @@ async function processTask(task: NonNullable<RunnableTask>) {
     throw new AppError("REPO_CONFIG_NOT_FOUND", 404, "仓库配置不存在");
   }
 
+  const access = await ensureRepositoryGitHubAccess(repo.id, repo.userId);
   const targetLanguages = config.targetLanguagesJson as string[];
   const source = await resolveSourceFiles(task);
   const progressTotal = source.changedFiles.length * targetLanguages.length;
+  const englishStemCache = new Map<string, string>();
+  const outputPathMap = new Map<string, string>();
+
+  for (const sourcePath of [...source.changedFiles, ...source.deletedFiles]) {
+    const normalizedSourcePath = normalizePath(sourcePath);
+    const extensionIndex = normalizedSourcePath.lastIndexOf(".");
+    const sourceStem =
+      extensionIndex === -1
+        ? normalizedSourcePath.split("/").pop() ?? normalizedSourcePath
+        : normalizedSourcePath.slice(
+            normalizedSourcePath.lastIndexOf("/") + 1,
+            extensionIndex,
+          );
+
+    let translatedStem = englishStemCache.get(normalizedSourcePath);
+
+    if (!translatedStem) {
+      translatedStem = await resolveEnglishFileStem({
+        sourceLanguage: repo.baseLanguage,
+        modelId: config.modelId,
+        stem: sourceStem,
+      });
+      englishStemCache.set(normalizedSourcePath, translatedStem);
+    }
+
+    for (const language of targetLanguages) {
+      outputPathMap.set(
+        `${language}:${normalizedSourcePath}`,
+        buildTranslatedOutputPath({
+          language,
+          sourcePath: normalizedSourcePath,
+          translatedFileName: translatedStem,
+        }),
+      );
+    }
+  }
 
   await updateTaskProgress(task.id, {
     progressTotal,
     changedFilesJson: source.changedFiles
   });
 
-  await createTaskItems(task.id, source.changedFiles, targetLanguages);
+  await createTaskItems({
+    taskId: task.id,
+    files: source.changedFiles,
+    languages: targetLanguages,
+    outputPathMap,
+  });
 
   if (!source.changedFiles.length && !source.deletedFiles.length) {
     await prisma.repositorySyncState.upsert({
@@ -284,6 +334,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
   let progressDone = 0;
   let progressFailed = 0;
   let firstItemError: string | null = null;
+  const publishedItems: Array<{ filePath: string; language: string; status: "succeeded" | "failed" }> = [];
 
   for (const item of taskItems) {
     try {
@@ -300,7 +351,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
       });
 
       const sourceContent = await getFileContent({
-        installationId: repo.installation.installationId,
+        installationId: access.installationId,
         owner: repo.owner,
         repo: repo.name,
         path: item.filePath,
@@ -324,8 +375,13 @@ async function processTask(task: NonNullable<RunnableTask>) {
       });
 
       artifactWrites.push({
-        path: item.outputPath ?? buildOutputPath(item.language, item.filePath),
+        path: item.outputPath ?? outputPathMap.get(`${item.language}:${normalizePath(item.filePath)}`)!,
         content: translatedContent
+      });
+      publishedItems.push({
+        filePath: item.filePath,
+        language: item.language,
+        status: "succeeded",
       });
 
       progressDone += 1;
@@ -344,6 +400,11 @@ async function processTask(task: NonNullable<RunnableTask>) {
           errorMessage: message
         }
       });
+      publishedItems.push({
+        filePath: item.filePath,
+        language: item.language,
+        status: "failed",
+      });
 
       progressFailed += 1;
 
@@ -356,7 +417,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
   for (const deletedFile of source.deletedFiles) {
     for (const language of targetLanguages) {
       artifactWrites.push({
-        path: buildOutputPath(language, deletedFile),
+        path: outputPathMap.get(`${language}:${normalizePath(deletedFile)}`)!,
         delete: true
       });
     }
@@ -366,21 +427,27 @@ async function processTask(task: NonNullable<RunnableTask>) {
   let readmeNavigationPreview: string | null = null;
 
   if (config.readmeNavigationEnabled && includesReadme && progressDone > 0) {
+    const publishedReadmeLanguages = collectPublishedReadmeLanguages({
+      targetLanguages,
+      items: publishedItems,
+    });
     const sourceReadme = await getFileContent({
-      installationId: repo.installation.installationId,
+      installationId: access.installationId,
       owner: repo.owner,
       repo: repo.name,
       path: "README.md",
       ref: repo.baseBranch
     });
 
-    const updatedReadme = updateReadmeNavigation(sourceReadme, targetLanguages);
-    readmeNavigationPreview = updatedReadme;
+    if (publishedReadmeLanguages.length > 0) {
+      const updatedReadme = updateReadmeNavigation(sourceReadme, publishedReadmeLanguages);
+      readmeNavigationPreview = updatedReadme;
 
-    artifactWrites.push({
-      path: "README.md",
-      content: updatedReadme
-    });
+      artifactWrites.push({
+        path: "README.md",
+        content: updatedReadme
+      });
+    }
   }
 
   const taskResult = deriveTaskResult({
@@ -420,7 +487,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
 
   if (fileWrites.length > 0) {
     const commit = await commitFilesToBranch({
-      installationId: repo.installation.installationId,
+      installationId: access.installationId,
       owner: repo.owner,
       repo: repo.name,
       baseBranch: repo.baseBranch,
@@ -433,7 +500,7 @@ async function processTask(task: NonNullable<RunnableTask>) {
     });
 
     const pr = await upsertPullRequest({
-      installationId: repo.installation.installationId,
+      installationId: access.installationId,
       owner: repo.owner,
       repo: repo.name,
       baseBranch: repo.baseBranch,

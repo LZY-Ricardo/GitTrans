@@ -161,38 +161,41 @@ export default async function RepoPage({ params }: RepoPageProps) {
               <Languages className="h-4 w-4 text-brand-700" />
             </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent>
             {tasks.length > 0 ? (
-              tasks.map((task) => (
-                <div key={task.id} className="rounded-[24px] border border-ink/8 bg-white/80 p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <TaskStatusBadge status={task.status} />
-                        <Badge variant="outline">{task.type === "full" ? "全量翻译" : "增量翻译"}</Badge>
+              <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+                {tasks.map((task) => (
+                  <div key={task.id} className="rounded-[24px] border border-ink/8 bg-white/80 p-5">
+                    <div className="flex h-full flex-col gap-4">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <TaskStatusBadge status={task.status} />
+                          <Badge variant="outline">{task.type === "full" ? "全量翻译" : "增量翻译"}</Badge>
+                        </div>
+                        <div>
+                          <p className="truncate font-medium text-ink" title={task.id}>{task.id}</p>
+                          <p className="text-sm text-ink-soft">
+                            {task.progressDone}/{task.progressTotal} 项 · 创建于 {formatDateTime(task.createdAt)}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-ink">{task.id}</p>
-                        <p className="text-sm text-ink-soft">
-                          {task.progressDone}/{task.progressTotal} 项 · 创建于 {formatDateTime(task.createdAt)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {task.prUrl ? (
-                        <Button asChild size="sm" variant="secondary">
-                          <a href={task.prUrl} rel="noreferrer" target="_blank">
-                            查看 PR
-                          </a>
+
+                      <div className="mt-auto flex flex-wrap gap-2">
+                        {task.prUrl ? (
+                          <Button asChild size="sm" variant="secondary">
+                            <a href={task.prUrl} rel="noreferrer" target="_blank">
+                              查看 PR
+                            </a>
+                          </Button>
+                        ) : null}
+                        <Button asChild size="sm">
+                          <Link href={`/task/${task.id}`}>任务详情</Link>
                         </Button>
-                      ) : null}
-                      <Button asChild size="sm">
-                        <Link href={`/task/${task.id}`}>任务详情</Link>
-                      </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             ) : (
               <div className="rounded-[24px] border border-dashed border-ink/12 bg-white/80 p-5 text-sm leading-7 text-ink-soft">
                 暂无任务记录

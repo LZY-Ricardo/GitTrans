@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Noto_Sans_SC, Noto_Serif_SC } from "next/font/google";
 import type { ReactNode } from "react";
 
+import { SiteFooter } from "@/components/layout/site-footer";
+
 import "./globals.css";
 
 const bodyFont = Noto_Sans_SC({
@@ -29,7 +31,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html className={`${bodyFont.variable} ${displayFont.variable}`} lang="zh-CN">
-      <body>{children}</body>
+      <body>
+        {children}
+        <SiteFooter />
+      </body>
     </html>
   );
 }

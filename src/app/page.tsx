@@ -4,6 +4,7 @@ import { ArrowRight, FolderGit2, Languages, Sparkles, Workflow } from "lucide-re
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getCurrentSessionPayload } from "@/modules/mvp/page-data";
 
 type HomePageProps = {
   searchParams?: Promise<{ error?: string }>;
@@ -26,6 +27,7 @@ const valueProps = [
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
+  const session = await getCurrentSessionPayload();
   const error = params?.error ?? null;
   const errorMessage =
     error === "github_network_unreachable"
@@ -35,9 +37,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         : null;
 
   return (
-    <main className="pb-16">
-      <div className="mx-auto mt-4 w-[min(1200px,calc(100%-24px))]">
-        <header className="flex flex-wrap items-center justify-between gap-4 rounded-full border border-white/70 bg-paper/88 px-5 py-3 shadow-[0_20px_80px_rgba(71,28,19,0.12)] backdrop-blur-xl">
+    <main className="pb-12">
+      <div className="mx-auto mt-4 w-[min(1200px,calc(100%-16px))] md:w-[min(1200px,calc(100%-24px))]">
+        <header className="flex flex-wrap items-center justify-between gap-4 rounded-[28px] border border-white/70 bg-paper/88 px-4 py-3 shadow-[0_20px_80px_rgba(71,28,19,0.12)] backdrop-blur-xl md:rounded-full md:px-5">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-full bg-brand-600 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(140,31,22,0.25)]">
               GT
@@ -49,8 +51,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
           <div className="flex items-center gap-3">
             <Button asChild>
-              <Link href="/dashboard">
-                进入控制台
+              <Link href={session ? "/dashboard" : "/api/auth/github/start"}>
+                {session ? "进入控制台" : "使用 GitHub 登录"}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -63,12 +65,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
         ) : null}
 
-        <section className="hero-mesh mt-8 overflow-hidden rounded-[40px] border border-white/70 px-6 py-10 shadow-[0_32px_100px_rgba(71,28,19,0.08)] md:px-10 md:py-14">
+        <section className="hero-mesh mt-8 overflow-hidden rounded-[28px] border border-white/70 px-4 py-8 shadow-[0_32px_100px_rgba(71,28,19,0.08)] md:rounded-[40px] md:px-10 md:py-14">
           <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
             <div className="space-y-6">
               <p className="section-eyebrow">GitHub 文档多语言管理</p>
               <div className="space-y-5">
-                <h1 className="max-w-4xl font-serif text-5xl leading-tight text-ink md:text-7xl">
+                <h1 className="max-w-4xl font-serif text-4xl leading-tight text-ink md:text-7xl">
                   让 GitHub 文档仓库
                   <span className="paper-accent"> 在一个工作台里完成多语言接入</span>
                 </h1>
@@ -76,8 +78,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
               <div className="flex flex-wrap items-center gap-3">
                 <Button asChild size="lg">
-                  <Link href="/dashboard">
-                    查看控制台
+                  <Link href={session ? "/dashboard" : "/api/auth/github/start"}>
+                    {session ? "查看控制台" : "开始 GitHub 登录"}
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -86,7 +88,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 </Button>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {[
                   { value: "6", label: "核心页面" },
                   { value: "17", label: "核心能力覆盖" },
@@ -134,7 +136,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           </div>
         </section>
 
-        <section className="mt-8 grid gap-6 lg:grid-cols-3">
+        <section className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {valueProps.map((item) => {
             const Icon = item.icon;
             return (
